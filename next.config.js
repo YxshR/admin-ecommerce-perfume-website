@@ -21,7 +21,8 @@ const nextConfig = {
   env: {
     GOOGLE_STORAGE_BUCKET_NAME: 'ecommerce-app-444531.appspot.com',
     GOOGLE_STORAGE_PROJECT_ID: 'ecommerce-app-444531',
-    MONGODB_URI: 'mongodb+srv://Yash:f500A06khWmFn4Qd@yash.pweao0h.mongodb.net/?retryWrites=true&w=majority&appName=Yash',
+    // Updated MongoDB URI with a placeholder - replace with your actual working MongoDB URI
+    MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce',
   },
   output: 'standalone',
   // Add experimental features to improve compatibility with Vercel deployments
