@@ -1,55 +1,72 @@
 import mongoose from 'mongoose';
 
-// Use environment variable only - don't include fallback connection string with credentials
+// Configure Mongoose in development mode
+if (process.env.NODE_ENV === 'development') {
+  mongoose.set('strictQuery', false);
+  mongoose.set('autoIndex', false); // Disable automatic index creation to prevent warnings
+}
+
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Connection state tracking
-let isConnected = false;
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable');
+}
+
+// Global interface
+interface MongooseConnection {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
+
+// Use a global variable to cache the mongoose connection
+let globalWithMongoose = global as typeof globalThis & {
+  mongoose: MongooseConnection;
+};
+
+// Initialize the cached connection
+if (!globalWithMongoose.mongoose) {
+  globalWithMongoose.mongoose = { conn: null, promise: null };
+}
 
 /**
  * Connect to MongoDB using mongoose
- * @returns Mongoose connection instance
+ * @returns Promise that resolves to the mongoose instance
  */
-async function connectMongoDB() {
-  // If already connected, return the existing connection
-  if (isConnected) {
-    return mongoose;
+async function connectMongoDB(): Promise<typeof mongoose> {
+  // If there's an existing connection, return it
+  if (globalWithMongoose.mongoose.conn) {
+    return globalWithMongoose.mongoose.conn;
+  }
+
+  // If a connection is in progress, wait for it
+  if (!globalWithMongoose.mongoose.promise) {
+    // Connect to the database
+    console.log('Connecting to MongoDB...');
+    
+    globalWithMongoose.mongoose.promise = mongoose.connect(MONGODB_URI!, {
+      bufferCommands: true,
+      // Add any other connection options if needed
+      serverSelectionTimeoutMS: 30000, // 30 seconds
+      connectTimeoutMS: 30000,
+    })
+    .then((mongoose) => {
+      console.log('MongoDB connected successfully');
+      return mongoose;
+    })
+    .catch((error) => {
+      console.error('MongoDB connection error:', error);
+      globalWithMongoose.mongoose.promise = null;
+      throw error;
+    });
   }
 
   try {
-    // Check if mongoose already has an active connection
-    if (mongoose.connections[0].readyState) {
-      isConnected = true;
-      return mongoose;
-    }
-
-    // Verify MongoDB URI is available
-    if (!MONGODB_URI) {
-      throw new Error('MONGODB_URI not defined in environment variables');
-    }
-
-    console.log('Connecting to MongoDB...');
-    
-    // Otherwise establish a new connection
-    const db = await mongoose.connect(MONGODB_URI, {
-      // Add connection options for better stability
-      serverSelectionTimeoutMS: 30000, // 30 seconds
-      connectTimeoutMS: 30000,
-      socketTimeoutMS: 60000,
-    });
-    
-    isConnected = true;
-    console.log('Connected to MongoDB database:', db.connection.db?.databaseName || 'unknown');
-    
-    return db;
+    // Wait for the connection to be established
+    globalWithMongoose.mongoose.conn = await globalWithMongoose.mongoose.promise;
+    return globalWithMongoose.mongoose.conn;
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    // Add more detailed error information
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      if ('code' in error) console.error('Error code:', (error as any).code);
-    }
+    // Reset the promise if there's an error
+    globalWithMongoose.mongoose.promise = null;
     throw error;
   }
 }

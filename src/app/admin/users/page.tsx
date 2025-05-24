@@ -49,8 +49,8 @@ export default function AdminUsers() {
   
   useEffect(() => {
     // Check if user is logged in and has admin role
-    const token = localStorage.getItem('admin_token');
-    const user = localStorage.getItem('admin_user');
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
     
     if (!token || !user) {
       router.push('/admin/login');
@@ -176,9 +176,8 @@ export default function AdminUsers() {
   };
   
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
-    localStorage.removeItem('admin_token_timestamp');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     router.push('/admin/login');
   };
   
@@ -190,7 +189,7 @@ export default function AdminUsers() {
     setDeleteError('');
     
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('token');
       
       const response = await fetch(`/api/users?id=${userToDelete.id}`, {
         method: 'DELETE',

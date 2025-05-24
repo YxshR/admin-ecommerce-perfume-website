@@ -47,8 +47,8 @@ export default function AdminDashboard() {
       let token, user;
       
       try {
-        token = localStorage.getItem('admin_token');
-        user = localStorage.getItem('admin_user');
+        token = localStorage.getItem('token');
+        user = localStorage.getItem('user');
         
         if (!token || !user) {
           router.push('/admin/login');
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
       // Fetch dashboard summary data
       let token;
       try {
-        token = localStorage.getItem('admin_token');
+        token = localStorage.getItem('token');
       } catch (storageError) {
         console.error('Error accessing localStorage:', storageError);
         useMockDashboardData();
@@ -208,9 +208,8 @@ export default function AdminDashboard() {
   
   const handleLogout = () => {
     try {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_user');
-      localStorage.removeItem('admin_token_timestamp');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
     } catch (error) {
       console.error('Error clearing localStorage:', error);
     }

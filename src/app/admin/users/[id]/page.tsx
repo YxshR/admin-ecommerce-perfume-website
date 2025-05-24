@@ -47,8 +47,8 @@ export default function EditUser() {
   
   useEffect(() => {
     // Check if user is logged in and has admin role
-    const token = localStorage.getItem('admin_token');
-    const userData = localStorage.getItem('admin_user');
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
     
     if (!token || !userData) {
       router.push('/admin/login');
@@ -132,7 +132,7 @@ export default function EditUser() {
     setSuccess(false);
     
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('token');
       
       const response = await fetch(`/api/users?id=${userId}`, {
         method: 'PATCH',
@@ -182,9 +182,8 @@ export default function EditUser() {
   };
   
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
-    localStorage.removeItem('admin_token_timestamp');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     router.push('/admin/login');
   };
   

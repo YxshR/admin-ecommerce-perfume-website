@@ -205,10 +205,10 @@ export default function AdminLoginPage() {
       const data = await res.json();
       
       if (data.success && data.token) {
-        // Save token to localStorage with admin-specific keys
-        localStorage.setItem('admin_token', data.token);
-        localStorage.setItem('admin_user', JSON.stringify(data.user));
-        localStorage.setItem('admin_token_timestamp', Date.now().toString());
+        // Save token to localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token_timestamp', Date.now().toString());
         
         // Redirect to admin dashboard
         router.push('/admin/dashboard');
@@ -256,10 +256,10 @@ export default function AdminLoginPage() {
         const data = await res.json();
         
         if (data.success && data.token) {
-          // Save token to localStorage with admin-specific keys
-          localStorage.setItem('admin_token', data.token);
-          localStorage.setItem('admin_user', JSON.stringify(data.user));
-          localStorage.setItem('admin_token_timestamp', Date.now().toString());
+          // Save token to localStorage
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('token_timestamp', Date.now().toString());
           
           // Redirect to admin dashboard
           router.push('/admin/dashboard');
