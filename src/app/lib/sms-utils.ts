@@ -3,7 +3,7 @@ import twilio from 'twilio';
 // Create a Twilio client instance
 const createTwilioClient = () => {
   // Get Twilio credentials from environment variables
-  const accountSid = process.env.TWILIO_ACCOUNT_SID || 'AC5ce650562b68c5e32e3864e1f1fa5e97';
+  const accountSid = process.env.TWILIO_ACCOUNT_SID ;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   
   if (!authToken) {
@@ -49,7 +49,7 @@ export const sendAdminSMS = async (phoneNumber: string): Promise<boolean> => {
     }
     
     const formattedPhone = formatPhoneNumber(phoneNumber);
-    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID || 'VA6d30f761fb32414863edfb815f56ed05';
+    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID ;
     
     // Start the verification process using Twilio Verify
     const verification = await client.verify.v2.services(verifyServiceSid)
@@ -78,7 +78,7 @@ export const verifyAdminSMS = async (phoneNumber: string, otp: string): Promise<
     }
     
     const formattedPhone = formatPhoneNumber(phoneNumber);
-    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID || 'VA6d30f761fb32414863edfb815f56ed05';
+    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID ;
     
     // Check the verification code
     const verificationCheck = await client.verify.v2.services(verifyServiceSid)
