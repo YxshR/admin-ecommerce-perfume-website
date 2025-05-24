@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { encrypt } from '@/app/lib/auth-utils';
-import { setAuthCookies } from '@/app/lib/auth';
+import { setApiCookies } from '../cookies-util';
 import connectMongoDB from '@/app/lib/mongodb';
 
 // This is a special admin bypass route for development/testing purposes only
@@ -29,23 +29,25 @@ export async function POST(request: NextRequest) {
         // Continue with bypass login even if MongoDB connection fails
       }
       
-      // Create user data object
-      const userData = {
+      // Create JWT token
+      const token = await encrypt({ 
         email: 'admin@example.com',
         name: 'Admin User',
         role: 'admin',
         userId: 'admin-bypass-user-id'
-      };
-      
-      // Create JWT token
-      const token = await encrypt(userData);
+      });
       
       // Create a response object with cache control headers
       const response = NextResponse.json(
         { 
           success: true,
           token,
-          user: userData
+          user: {
+            email: 'admin@example.com',
+            name: 'Admin User',
+            role: 'admin',
+            userId: 'admin-bypass-user-id'
+          }
         },
         {
           headers: {
@@ -56,8 +58,15 @@ export async function POST(request: NextRequest) {
         }
       );
       
-      // Set authentication cookies using the standard function
-      setAuthCookies(response, userData, token);
+      // Set authentication cookies
+      const mockUser = {
+        _id: 'admin-bypass-user-id',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'admin'
+      };
+      
+      setApiCookies(response, mockUser, token);
       
       console.log('Admin bypass login successful, returning response');
       return response;

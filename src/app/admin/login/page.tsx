@@ -196,17 +196,16 @@ export default function AdminLoginPage() {
         : { phone, otp };
         
       const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        cache: 'no-store',
-        credentials: 'include' // Important for cookies
+        cache: 'no-store'
       });
       
       const data = await res.json();
       
       if (data.success && data.token) {
-        // Cookies are set by the server, but keep token in localStorage for compatibility
+        // Save token to localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token_timestamp', Date.now().toString());
@@ -215,7 +214,7 @@ export default function AdminLoginPage() {
         router.push('/admin/dashboard');
       } else {
         setError(data.error || 'Invalid OTP. Please try again.');
-      }
+          }
     } catch (err: any) {
       console.error('OTP verification error:', err);
       setError(err.message || 'Failed to verify OTP. Please try again.');
@@ -247,31 +246,30 @@ export default function AdminLoginPage() {
           'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({ email: 'admin@example.com', password: 'admin123' }),
-        cache: 'no-store',
-        credentials: 'include' // Important for cookies
+        cache: 'no-store'
       });
       
       if (!res.ok) {
         throw new Error('Invalid access credentials.');
       }
       
-      const data = await res.json();
-      
-      if (data.success && data.token) {
-        // Cookies are set by the server, but keep token in localStorage for compatibility
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('token_timestamp', Date.now().toString());
+        const data = await res.json();
         
-        // Redirect to admin dashboard
-        router.push('/admin/dashboard');
-      } else {
+        if (data.success && data.token) {
+          // Save token to localStorage
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('token_timestamp', Date.now().toString());
+          
+          // Redirect to admin dashboard
+          router.push('/admin/dashboard');
+        } else {
         setError('Authentication failed. Please try again.');
-      }
+        }
     } catch (bypassError: any) {
       console.error('Bypass login error:', bypassError);
       setError(bypassError.message || 'Authentication failed.');
-    }
+      }
   };
   
   // Render content based on current step
