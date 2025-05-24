@@ -5,43 +5,192 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings } from 'react-icons/fi';
 
-export default function AdminDashboard() {
+// Custom hook for security checks
+const useAdminSecurity = () => {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState('');
-  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Check if user is logged in and has admin role
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    
-    if (!token || !user) {
-      router.push('/admin/login');
-      return;
-    }
-    
-    try {
-      const userData = JSON.parse(user);
-      if (userData.role !== 'admin') {
-        router.push('/admin/login');
-        return;
+    // Security: Function to check for devtools
+    const detectDevTools = () => {
+      if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+        const widthThreshold = window.outerWidth - window.innerWidth > 160;
+        const heightThreshold = window.outerHeight - window.innerHeight > 160;
+        
+        if (widthThreshold || heightThreshold) {
+          // Force logout on devtools detection
+          handleUnauthorized();
+        }
       }
+    };
+    
+    // Security: Check if user is authenticated
+    const checkAuth = () => {
+      try {
+        // First check cookies
+        const isLoggedInCookie = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('isLoggedIn='))
+          ?.split('=')[1];
+        
+        // Next check sessionStorage (preferred for admin)
+        const token = sessionStorage.getItem('token');
+        const user = sessionStorage.getItem('user');
+        
+        // Fallback to localStorage (legacy)
+        const legacyToken = localStorage.getItem('token');
+        const legacyUser = localStorage.getItem('user');
+        
+        // Perform security validation
+        let isValid = false;
+        let userData = null;
+        
+        if (token && user && isLoggedInCookie?.startsWith('true')) {
+          // Preferred: Use sessionStorage data
+          userData = JSON.parse(user);
+          if (userData.role === 'admin') {
+            isValid = true;
+          }
+        } else if (legacyToken && legacyUser) {
+          // Legacy: Use localStorage data but migrate to sessionStorage
+          userData = JSON.parse(legacyUser);
+          if (userData.role === 'admin') {
+            isValid = true;
+            
+            // Migrate to sessionStorage for better security
+            sessionStorage.setItem('token', legacyToken);
+            sessionStorage.setItem('user', legacyUser);
+            sessionStorage.setItem('token_timestamp', Date.now().toString());
+          }
+        }
+        
+        if (isValid && userData) {
+          setIsAuthenticated(true);
+          setUserName(userData.name || 'Admin');
+        } else {
+          handleUnauthorized();
+        }
+      } catch (error) {
+        handleUnauthorized();
+      }
+    };
+    
+    const handleUnauthorized = () => {
+      // Clear all auth data
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('token_timestamp');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       
-      setIsAdmin(true);
-      setUserName(userData.name || 'Admin');
-      setLoading(false);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
+      // Clear cookies client-side
+      document.cookie = 'isLoggedIn=; Path=/; Max-Age=0; SameSite=Lax';
+      document.cookie = 'userData=; Path=/; Max-Age=0; SameSite=Lax';
+      
+      // Redirect to login
       router.push('/admin/login');
-    }
+    };
+    
+    // Set up security listeners
+    checkAuth();
+    window.addEventListener('resize', detectDevTools);
+    window.addEventListener('storage', checkAuth);
+    const securityInterval = setInterval(checkAuth, 60000); // Re-check auth every minute
+    
+    // Security: Token expiration check
+    const checkTokenExpiration = () => {
+      const timestamp = sessionStorage.getItem('token_timestamp') || localStorage.getItem('token_timestamp');
+      if (timestamp) {
+        const tokenAge = Date.now() - parseInt(timestamp);
+        // Expire token after 1 hour of inactivity
+        if (tokenAge > 3600000) {
+          handleUnauthorized();
+        }
+      }
+    };
+    
+    const expiryInterval = setInterval(checkTokenExpiration, 60000);
+    
+    return () => {
+      window.removeEventListener('resize', detectDevTools);
+      window.removeEventListener('storage', checkAuth);
+      clearInterval(securityInterval);
+      clearInterval(expiryInterval);
+    };
   }, [router]);
   
+  return { isAuthenticated, userName };
+};
+
+export default function AdminDashboard() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, userName } = useAdminSecurity();
+  
+  // Client-side data masking
+  const maskSensitiveData = (data: string) => {
+    // For demonstration purposes, show only first character and mask the rest
+    if (!data || typeof data !== 'string') return '';
+    if (data.length <= 4) return '*'.repeat(data.length);
+    return data.slice(0, 2) + '*'.repeat(data.length - 3) + data.slice(-1);
+  };
+  
+  useEffect(() => {
+    // If authentication check is complete
+    if (isAuthenticated) {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
+  
   const handleLogout = () => {
+    // Clear sessionStorage
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token_timestamp');
+    
+    // Clear localStorage for legacy support
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    router.push('/admin/login');
+    
+    // Clear cookies client-side
+    document.cookie = 'isLoggedIn=; Path=/; Max-Age=0; SameSite=Lax';
+    document.cookie = 'userData=; Path=/; Max-Age=0; SameSite=Lax';
+    
+    // Server-side logout to clear HTTP-only cookies
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Cache-Control': 'no-cache' },
+      credentials: 'include'
+    }).finally(() => {
+      router.push('/admin/login');
+    });
   };
+  
+  // Detect page visibility changes for additional security
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Update timestamp when tab/window is not visible
+        sessionStorage.setItem('last_visibility_change', Date.now().toString());
+      } else {
+        // When tab becomes visible, check time elapsed
+        const lastChange = sessionStorage.getItem('last_visibility_change');
+        if (lastChange) {
+          const timeElapsed = Date.now() - parseInt(lastChange);
+          // If tab was hidden for more than 30 minutes, log out
+          if (timeElapsed > 1800000) {
+            handleLogout();
+          }
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [router]);
   
   if (loading) {
     return (
@@ -185,7 +334,7 @@ export default function AdminDashboard() {
                     #FRA-001
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    John Smith
+                    {maskSensitiveData("John Smith")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     May 23, 2023
@@ -204,7 +353,7 @@ export default function AdminDashboard() {
                     #FRA-002
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    Priya Sharma
+                    {maskSensitiveData("Priya Sharma")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     May 22, 2023
@@ -223,7 +372,7 @@ export default function AdminDashboard() {
                     #FRA-003
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    Rahul Kumar
+                    {maskSensitiveData("Rahul Kumar")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     May 21, 2023

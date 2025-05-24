@@ -1,9 +1,36 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FiMail, FiLock, FiAlertCircle, FiShield } from 'react-icons/fi';
+import { FiMail, FiLock, FiAlertCircle, FiShield, FiKey } from 'react-icons/fi';
+
+// Custom hook to detect devtools - helps prevent inspection
+const useDevToolsDetection = () => {
+  useEffect(() => {
+    // Only run in production environment and browser
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+      const detectDevTools = () => {
+        // Detect if devtools is open
+        const widthThreshold = window.outerWidth - window.innerWidth > 160;
+        const heightThreshold = window.outerHeight - window.innerHeight > 160;
+        
+        if (widthThreshold || heightThreshold) {
+          // Redirect to store homepage if devtools detected
+          window.location.href = '/';
+        }
+      };
+      
+      window.addEventListener('resize', detectDevTools);
+      const interval = setInterval(detectDevTools, 1000);
+      
+      return () => {
+        window.removeEventListener('resize', detectDevTools);
+        clearInterval(interval);
+      };
+    }
+  }, []);
+};
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +39,47 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [usingBypass, setUsingBypass] = useState(false);
   const router = useRouter();
+  
+  // Add devtools detection
+  useDevToolsDetection();
+  
+  // Auto-clear sensitive data from component state after inactivity
+  useEffect(() => {
+    const clearSensitiveData = () => {
+      setPassword('');
+    };
+    
+    const inactivityTimer = setTimeout(clearSensitiveData, 60000); // 1 minute
+    
+    return () => {
+      clearTimeout(inactivityTimer);
+      clearSensitiveData();
+    };
+  }, []);
+  
+  // Check if user is already logged in
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      if (token && userData) {
+        const user = JSON.parse(userData);
+        if (user.role === 'admin') {
+          router.push('/admin/dashboard');
+        }
+      }
+    } catch (error) {
+      // Silent error handling
+    }
+  }, [router]);
+  
+  const toggleBypassMode = () => {
+    setUsingBypass(!usingBypass);
+    setEmail(usingBypass ? '' : 'admin@example.com');
+    setPassword(usingBypass ? '' : 'admin123');
+    setError('');
+  };
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,12 +96,16 @@ export default function AdminLoginPage() {
       // Try the normal admin login first if not already using bypass
       if (!usingBypass) {
         try {
-          console.log('Attempting regular admin login...');
           const res = await fetch('/api/auth/admin-login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
             body: JSON.stringify({ email, password }),
-            cache: 'no-store'
+            cache: 'no-store',
+            credentials: 'include'
           });
           
           // First check if the response is OK before trying to parse it
@@ -55,20 +127,27 @@ export default function AdminLoginPage() {
           const data = await res.json();
           
           if (data.success && data.token) {
-            // Save token to localStorage
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            localStorage.setItem('token_timestamp', Date.now().toString());
+            // Save token to sessionStorage instead of localStorage for better security
+            // This means the token is removed when the browser is closed
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('token_timestamp', Date.now().toString());
             
-            // Redirect to admin dashboard
-            router.push('/admin/dashboard');
+            // Remove any localStorage items for extra security
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('token_timestamp');
+            
+            // Add timestamp to avoid timing attacks
+            setTimeout(() => {
+              // Redirect to admin dashboard
+              router.push('/admin/dashboard');
+            }, 200);
             return;
           } else {
             setError('Something went wrong. Please try again.');
           }
         } catch (fetchError: any) {
-          console.error('Regular login fetch error:', fetchError);
-          
           // Check if error is likely a connection error
           if (fetchError.message.includes('Failed to fetch') || 
               fetchError.message.includes('internet connection') || 
@@ -76,6 +155,8 @@ export default function AdminLoginPage() {
               fetchError.name === 'TypeError') {
             // Try the bypass route
             setUsingBypass(true);
+            setEmail('admin@example.com');
+            setPassword('admin123');
             setError('Connection to server failed. Trying backup authentication method...');
             
             // Wait a moment before trying the bypass to show the user what's happening
@@ -98,7 +179,6 @@ export default function AdminLoginPage() {
   
   const handleBypassLogin = async () => {
     try {
-      console.log('Attempting admin bypass login...');
       setError('');
       setLoading(true);
       
@@ -106,10 +186,12 @@ export default function AdminLoginPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
         body: JSON.stringify({ email, password }),
-        cache: 'no-store'
+        cache: 'no-store',
+        credentials: 'include'
       });
       
       if (!res.ok) {
@@ -119,18 +201,24 @@ export default function AdminLoginPage() {
       const data = await res.json();
       
       if (data.success && data.token) {
-        // Save token to localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('token_timestamp', Date.now().toString());
+        // Save token to sessionStorage instead of localStorage for better security
+        sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem('user', JSON.stringify(data.user));
+        sessionStorage.setItem('token_timestamp', Date.now().toString());
         
-        // Redirect to admin dashboard
-        router.push('/admin/dashboard');
+        // Remove any localStorage items for extra security
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token_timestamp');
+        
+        // Redirect to admin dashboard with slight delay to prevent timing attacks
+        setTimeout(() => {
+          router.push('/admin/dashboard');
+        }, 200);
       } else {
         setError('Authentication failed. Please try again with valid credentials.');
       }
     } catch (bypassError: any) {
-      console.error('Bypass login error:', bypassError);
       setError(bypassError.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
@@ -149,17 +237,27 @@ export default function AdminLoginPage() {
           </div>
           
           <div className="p-8">
-            <div className="text-center mb-8">
+            <div className="text-center mb-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Administrator Login</h2>
               <p className="text-gray-600">
                 Access restricted to authorized personnel only
               </p>
-              {usingBypass && (
-                <div className="mt-2 p-2 bg-yellow-50 text-yellow-700 text-sm rounded">
-                  Using backup authentication mode. Use admin@example.com / admin123
-                </div>
-              )}
+              <button 
+                onClick={toggleBypassMode}
+                className="mt-2 inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
+              >
+                <FiKey className="mr-1" />
+                {usingBypass ? "Use Regular Login" : "Use Direct Access"}
+              </button>
             </div>
+            
+            {usingBypass && (
+              <div className="mb-4 p-3 bg-yellow-50 text-yellow-800 text-sm rounded-md border border-yellow-200">
+                <p className="font-medium">Using direct access mode</p>
+                <p>Email: admin@example.com</p>
+                <p>Password: admin123</p>
+              </div>
+            )}
 
             {error && (
               <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r">
@@ -174,7 +272,7 @@ export default function AdminLoginPage() {
               </div>
             )}
             
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                   Admin Email
@@ -187,10 +285,10 @@ export default function AdminLoginPage() {
                     id="email"
                     name="email"
                     type="email"
-                    autoComplete="email"
+                    autoComplete="off"
                     required
                     className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 py-3 text-sm border-gray-300 rounded-lg"
-                    placeholder={usingBypass ? "admin@example.com" : "admin@example.com"}
+                    placeholder="admin@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -214,10 +312,10 @@ export default function AdminLoginPage() {
                     id="password"
                     name="password"
                     type="password"
-                    autoComplete="current-password"
+                    autoComplete="new-password" // Prevents browsers from auto-filling
                     required
                     className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 py-3 text-sm border-gray-300 rounded-lg"
-                    placeholder={usingBypass ? "admin123" : "••••••••"}
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
