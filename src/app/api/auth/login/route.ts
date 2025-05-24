@@ -22,7 +22,14 @@ export async function POST(request: NextRequest) {
       console.log('Missing email or password');
       return NextResponse.json(
         { success: false, error: 'Please provide email and password' },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
     
@@ -34,7 +41,14 @@ export async function POST(request: NextRequest) {
       console.log('User not found');
       return NextResponse.json(
         { success: false, error: 'Invalid email or password' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
     
@@ -46,7 +60,14 @@ export async function POST(request: NextRequest) {
       console.log('Invalid password');
       return NextResponse.json(
         { success: false, error: 'Invalid email or password' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }
       );
     }
     
@@ -60,16 +81,25 @@ export async function POST(request: NextRequest) {
     });
     
     console.log('Token generated, creating response...');
-    // Create a response object
-    const response = NextResponse.json({ 
-      success: true,
-      user: {
-        email: user.email,
-        name: user.name,
-        role: user.role || 'user',
-        userId: user._id.toString()
+    // Create a response object with cache control headers
+    const response = NextResponse.json(
+      { 
+        success: true,
+        user: {
+          email: user.email,
+          name: user.name,
+          role: user.role || 'user',
+          userId: user._id.toString()
+        }
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       }
-    });
+    );
     
     // Set authentication cookies in the response
     console.log('Setting cookies...');
@@ -83,7 +113,14 @@ export async function POST(request: NextRequest) {
     console.error('Login error:', error);
     return NextResponse.json(
       { success: false, error: 'Something went wrong. Please try again.' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      }
     );
   }
 }

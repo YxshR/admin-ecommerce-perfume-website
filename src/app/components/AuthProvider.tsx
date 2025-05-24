@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 interface User {
   userId: string;
@@ -26,57 +26,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  // Check authentication status when component mounts
-  useEffect(() => {
-    const checkAuth = () => {
-      try {
-        // Check for client-side cookie indicator
-        const loginStatus = document.cookie
+  // Function to check authentication status
+  const checkAuth = () => {
+    try {
+      // Check for client-side cookie indicator
+      const loginStatus = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('isLoggedIn='))
+        ?.split('=')[1];
+      
+      console.log('Checking auth status, isLoggedIn cookie:', loginStatus);
+      
+      if (loginStatus === 'true') {
+        // Get user data from cookie
+        const userDataCookie = document.cookie
           .split('; ')
-          .find(row => row.startsWith('isLoggedIn='))
+          .find(row => row.startsWith('userData='))
           ?.split('=')[1];
         
-        console.log('Checking auth status, isLoggedIn cookie:', loginStatus);
-        
-        if (loginStatus === 'true') {
-          // Get user data from cookie
-          const userDataCookie = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('userData='))
-            ?.split('=')[1];
-          
-          if (userDataCookie) {
-            try {
-              const userData = JSON.parse(decodeURIComponent(userDataCookie));
-              console.log('User data found in cookie:', userData?.email);
-              setUser(userData);
-            } catch (parseError) {
-              console.error('Failed to parse user data cookie:', parseError);
-              setUser(null);
-            }
-          } else {
-            console.log('No user data cookie found');
+        if (userDataCookie) {
+          try {
+            const userData = JSON.parse(decodeURIComponent(userDataCookie));
+            console.log('User data found in cookie:', userData?.email);
+            setUser(userData);
+          } catch (parseError) {
+            console.error('Failed to parse user data cookie:', parseError);
             setUser(null);
           }
         } else {
-          console.log('Not logged in');
+          console.log('No user data cookie found');
           setUser(null);
         }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
+      } else {
+        console.log('Not logged in');
         setUser(null);
-      } finally {
-        setIsLoading(false);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check authentication status when component mounts
+  useEffect(() => {
     checkAuth();
     
     // Listen for storage events to handle logout in other tabs
     window.addEventListener('storage', checkAuth);
     return () => window.removeEventListener('storage', checkAuth);
   }, []);
+  
+  // Re-check auth status when route changes
+  useEffect(() => {
+    console.log('Route changed, re-checking auth status');
+    checkAuth();
+  }, [pathname]);
   
   // Login function
   const login = async (email: string, password: string, redirectPath?: string) => {
@@ -121,7 +129,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.success) {
         console.log('Login successful');
+        
+        // Immediately update the user state after successful login
         setUser(data.user);
+        
+        // Trigger a storage event to ensure all tabs are updated
+        window.localStorage.setItem('auth_timestamp', Date.now().toString());
+        
+        // Directly call checkAuth to ensure state is updated immediately
+        checkAuth();
         
         // Handle redirect logic in this order:
         // 1. Use explicitly provided redirectPath (from function parameter)
@@ -191,6 +207,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(null);
       console.log('Logout successful');
+      
+      // Trigger a storage event to ensure all tabs are updated
+      window.localStorage.setItem('auth_timestamp', Date.now().toString());
+      
       router.push('/');
       router.refresh();
     } catch (error) {

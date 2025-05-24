@@ -16,8 +16,8 @@ export function setApiCookies(response: NextResponse, user: any, token: string) 
     });
     console.log('Set token cookie (httpOnly)');
     
-    // Set non-HTTP-only cookie for login status check
-    response.cookies.set('isLoggedIn', 'true', {
+    // Set non-HTTP-only cookie for login status check with a timestamp to ensure freshness
+    response.cookies.set('isLoggedIn', `true.${Date.now()}`, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -28,7 +28,9 @@ export function setApiCookies(response: NextResponse, user: any, token: string) 
     
     // Set non-HTTP-only cookie for user data (non-sensitive)
     const userData = {
-      userId: user.userId || user._id,
+      userId: typeof user._id === 'object' && user._id !== null 
+        ? user._id.toString() 
+        : user.userId || user._id,
       name: user.name,
       email: user.email,
       role: user.role
@@ -54,26 +56,23 @@ export function clearApiCookies(response: NextResponse) {
   console.log('Clearing authentication cookies');
   
   try {
-    response.cookies.set('token', '', {
-      httpOnly: true,
+    // For all cookies, set with these options to ensure proper deletion
+    const cookieOptions = {
+      httpOnly: true, // We set all cookies to httpOnly for deletion to be thorough
       secure: process.env.NODE_ENV === 'production',
       maxAge: 0,
-      path: '/'
-    });
+      path: '/',
+      sameSite: 'lax' as const
+    };
     
-    response.cookies.set('isLoggedIn', '', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 0,
-      path: '/'
-    });
+    response.cookies.set('token', '', cookieOptions);
+    response.cookies.set('isLoggedIn', '', cookieOptions);
+    response.cookies.set('userData', '', cookieOptions);
     
-    response.cookies.set('userData', '', {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 0,
-      path: '/'
-    });
+    // Also try alternative deletion approach for better cross-browser compatibility
+    response.headers.append('Set-Cookie', 'token=; Path=/; Max-Age=0; SameSite=Lax');
+    response.headers.append('Set-Cookie', 'isLoggedIn=; Path=/; Max-Age=0; SameSite=Lax');
+    response.headers.append('Set-Cookie', 'userData=; Path=/; Max-Age=0; SameSite=Lax');
     
     console.log('All cookies cleared successfully');
   } catch (error) {
