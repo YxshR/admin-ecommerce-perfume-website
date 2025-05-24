@@ -30,6 +30,41 @@ const nextConfig = {
     optimizeCss: true,
   },
   serverExternalPackages: [],
+  // Add custom webpack configuration to handle client reference manifests
+  webpack: (config, { isServer, dev }) => {
+    // Fix for client reference manifest issues in app router
+    if (!isServer && !dev) {
+      config.plugins.push({
+        apply: (compiler) => {
+          compiler.hooks.afterEmit.tap('CopyClientReferenceManifest', (compilation) => {
+            // This ensures the client reference manifest is available in all directories
+            const fs = require('fs');
+            const path = require('path');
+            
+            try {
+              // Source manifest file
+              const sourceManifestPath = path.join(__dirname, '.next/server/app/page_client-reference-manifest.js');
+              
+              if (fs.existsSync(sourceManifestPath)) {
+                // Create (store) directory if it doesn't exist
+                const targetDir = path.join(__dirname, '.next/server/app/(store)');
+                if (!fs.existsSync(targetDir)) {
+                  fs.mkdirSync(targetDir, { recursive: true });
+                }
+                
+                // Copy the manifest file to the (store) directory
+                const targetManifestPath = path.join(targetDir, 'page_client-reference-manifest.js');
+                fs.copyFileSync(sourceManifestPath, targetManifestPath);
+              }
+            } catch (error) {
+              console.error('Error copying client reference manifest:', error);
+            }
+          });
+        }
+      });
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig; 
