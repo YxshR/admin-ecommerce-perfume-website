@@ -43,15 +43,15 @@ export default function AdminDashboard() {
   // Authentication check
   useEffect(() => {
     try {
-      // Check if user is logged in and has admin role
+    // Check if user is logged in and has admin role
       let token, user;
       
       try {
         token = localStorage.getItem('token');
         user = localStorage.getItem('user');
-        
-        if (!token || !user) {
-          router.push('/admin/login');
+    
+    if (!token || !user) {
+      router.push('/admin/login');
           return;
         }
       } catch (storageError) {
@@ -61,19 +61,19 @@ export default function AdminDashboard() {
         setUserName('Admin');
         setLoading(false);
         fetchDashboardData();
+      return;
+    }
+    
+    try {
+      const userData = JSON.parse(user);
+      if (userData.role !== 'admin') {
+        router.push('/admin/login');
         return;
       }
       
-      try {
-        const userData = JSON.parse(user);
-        if (userData.role !== 'admin') {
-          router.push('/admin/login');
-          return;
-        }
-        
-        setIsAdmin(true);
-        setUserName(userData.name || 'Admin');
-        setLoading(false);
+      setIsAdmin(true);
+      setUserName(userData.name || 'Admin');
+      setLoading(false);
         
         // Fetch dashboard data
         fetchDashboardData();
@@ -208,8 +208,8 @@ export default function AdminDashboard() {
   
   const handleLogout = () => {
     try {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     } catch (error) {
       console.error('Error clearing localStorage:', error);
     }
@@ -281,8 +281,8 @@ export default function AdminDashboard() {
       <div className="flex-1 p-8">
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Welcome, {userName}</h1>
-            <p className="text-gray-600">Here's an overview of your store</p>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome, {userName}</h1>
+          <p className="text-gray-600">Here's an overview of your store</p>
           </div>
           <button 
             onClick={handleRefresh}
@@ -376,35 +376,35 @@ export default function AdminDashboard() {
                 {dashboardData.recentOrders && dashboardData.recentOrders.length > 0 ? (
                   dashboardData.recentOrders.map((order) => (
                     <tr key={order._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         #{order.orderNumber || order._id.substring(0, 8).toUpperCase()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {order.customer?.name || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(order.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                           ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
                             order.status === 'processing' ? 'bg-blue-100 text-blue-800' : 
                             order.status === 'shipped' ? 'bg-purple-100 text-purple-800' : 
                             'bg-gray-100 text-gray-800'}`}>
                           {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Pending'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         ₹{(order.total || order.totalAmount || 0).toFixed(2)}
-                      </td>
-                    </tr>
+                  </td>
+                </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
                       No recent orders found
-                    </td>
-                  </tr>
+                  </td>
+                </tr>
                 )}
               </tbody>
             </table>

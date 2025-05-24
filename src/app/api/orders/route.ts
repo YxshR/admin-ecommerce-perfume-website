@@ -12,7 +12,7 @@ export async function GET() {
     
     // Connect to the database
     try {
-      await connectMongoDB();
+    await connectMongoDB();
       console.log('MongoDB connected successfully for orders API');
     } catch (dbError) {
       console.error('Failed to connect to MongoDB for orders:', dbError);
@@ -63,7 +63,7 @@ export async function GET() {
         paymentStatus: order.isPaid ? 'paid' : 'unpaid',
       };
     });
-
+    
     return NextResponse.json({ success: true, orders: formattedOrders });
   } catch (err) {
     console.error('Error fetching orders:', err);

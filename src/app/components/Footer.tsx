@@ -26,11 +26,6 @@ export default function Footer() {
                 </li>
               )}
               <li>
-                <Link href="/policy" className="text-gray-600 hover:text-black text-sm">
-                  Our Policies
-                </Link>
-              </li>
-              <li>
                 <Link href="/shipping-policy" className="text-gray-600 hover:text-black text-sm">
                   Shipping & Delivery
                 </Link>
@@ -146,9 +141,6 @@ export default function Footer() {
               </p>
             </div>
             <div className="flex space-x-6">
-              <Link href="/policy" className="text-sm text-gray-500 hover:text-black">
-                Policy
-              </Link>
               <Link href="/privacy-policy" className="text-sm text-gray-500 hover:text-black">
                 Privacy Policy
               </Link>
