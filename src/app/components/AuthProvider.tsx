@@ -21,9 +21,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Environment check to prevent execution in non-production environments
-const isDev = process.env.NODE_ENV === 'development';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // Function to check authentication status - with no debugging info exposed
+  // Function to check authentication status
   const checkAuth = () => {
     try {
       // Check for client-side cookie indicator
@@ -40,52 +37,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .find(row => row.startsWith('isLoggedIn='))
         ?.split('=')[1];
       
-      // Now supports both formats: 'true' and 'true.{timestamp}'
-      if (loginStatus && (loginStatus === 'true' || loginStatus.startsWith('true.'))) {
+      console.log('Checking auth status, isLoggedIn cookie:', loginStatus);
+      
+      if (loginStatus === 'true') {
         // Get user data from cookie
         const userDataCookie = document.cookie
           .split('; ')
           .find(row => row.startsWith('userData='))
           ?.split('=')[1];
         
-        // Check session storage for admin users (new method)
-        const sessionUser = sessionStorage.getItem('user');
-        
-        // Check local storage for regular users (old method)
-        const localUser = localStorage.getItem('user');
-        
-        // Determine which user data to use
-        let userData = null;
-        
         if (userDataCookie) {
           try {
-            userData = JSON.parse(decodeURIComponent(userDataCookie));
-          } catch (error) {
-            // Silent error handling
+            const userData = JSON.parse(decodeURIComponent(userDataCookie));
+            console.log('User data found in cookie:', userData?.email);
+            setUser(userData);
+          } catch (parseError) {
+            console.error('Failed to parse user data cookie:', parseError);
+            setUser(null);
           }
-        } else if (sessionUser) {
-          try {
-            userData = JSON.parse(sessionUser);
-          } catch (error) {
-            // Silent error handling
-          }
-        } else if (localUser) {
-          try {
-            userData = JSON.parse(localUser);
-          } catch (error) {
-            // Silent error handling
-          }
-        }
-        
-        if (userData) {
-          setUser(userData);
         } else {
+          console.log('No user data cookie found');
           setUser(null);
         }
       } else {
+        console.log('Not logged in');
         setUser(null);
       }
     } catch (error) {
+      console.error('Error checking authentication:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -101,27 +80,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', checkAuth);
   }, []);
   
-  // Re-check auth status when route changes with no logging
+  // Re-check auth status when route changes
   useEffect(() => {
+    console.log('Route changed, re-checking auth status');
     checkAuth();
   }, [pathname]);
   
-  // Login function with no sensitive data logging
+  // Login function
   const login = async (email: string, password: string, redirectPath?: string) => {
     try {
       setIsLoading(true);
+      console.log('Login attempt for:', email);
       
       // Use window.location to get the exact current URL base
+      // This ensures we're using whatever port the page is currently on
       const baseUrl = window.location.origin;
       const timestamp = Date.now();
       const apiUrl = `${baseUrl}/api/auth/login?_=${timestamp}`;
+      
+      console.log('Sending login request to:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({ email, password }),
         credentials: 'include', // Important for cookies
@@ -129,13 +112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (!response.ok) {
+        console.error('Login API error:', response.status, response.statusText);
         let errorMessage = 'Login failed';
         
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          // Silent error handling
+          console.error('Failed to parse error response:', e);
         }
         
         return { success: false, error: errorMessage };
@@ -144,21 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       
       if (data.success) {
-        // Store user data in both localStorage (for backward compatibility)
-        // and sessionStorage (for newer security model)
-        if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-          sessionStorage.setItem('user', JSON.stringify(data.user));
-          
-          if (data.token) {
-            localStorage.setItem('token', data.token);
-            sessionStorage.setItem('token', data.token);
-          }
-          
-          const timestamp = Date.now().toString();
-          localStorage.setItem('token_timestamp', timestamp);
-          sessionStorage.setItem('token_timestamp', timestamp);
-        }
+        console.log('Login successful');
         
         // Immediately update the user state after successful login
         setUser(data.user);
@@ -169,9 +139,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Directly call checkAuth to ensure state is updated immediately
         checkAuth();
         
-        // Add a small delay to make sure cookies are properly set
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
         // Handle redirect logic in this order:
         // 1. Use explicitly provided redirectPath (from function parameter)
         // 2. Use URL query parameter redirect
@@ -179,17 +146,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // First check for explicitly provided redirect path
         if (redirectPath) {
+          console.log('Redirecting to explicit path:', redirectPath);
           router.push(redirectPath);
         } else {
           // Check URL parameter
           const urlRedirect = searchParams.get('redirect');
           if (urlRedirect) {
+            console.log('Redirecting to URL param path:', urlRedirect);
             router.push(urlRedirect);
           } else {
             // Default redirect based on role
             if (data.user.role === 'admin') {
+              console.log('Redirecting admin to dashboard');
               router.push('/admin/dashboard');
             } else {
+              console.log('Redirecting user to account');
               router.push('/account');
             }
           }
@@ -197,24 +168,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         return { success: true };
       } else {
+        console.error('Login failed:', data.error);
         return { success: false, error: data.error || 'Login failed' };
       }
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Logout function with no logging
+  // Logout function
   const logout = async () => {
     try {
       setIsLoading(true);
+      console.log('Logging out...');
       
       // Use window.location to get the current URL base
       const baseUrl = window.location.origin;
       const timestamp = Date.now();
       const apiUrl = `${baseUrl}/api/auth/logout?_=${timestamp}`;
+      
+      console.log('Sending logout request to:', apiUrl);
       
       await fetch(apiUrl, {
         method: 'POST',
@@ -225,33 +201,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cache: 'no-store'
       });
       
-      // Clear client-side storage - both types
-      // Clear localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('token_timestamp');
-      
-      // Clear sessionStorage
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('user');
-      sessionStorage.removeItem('token_timestamp');
-      
       // Clear client-side cookies
       document.cookie = 'isLoggedIn=; Path=/; Max-Age=0; SameSite=Lax';
       document.cookie = 'userData=; Path=/; Max-Age=0; SameSite=Lax';
       
       setUser(null);
+      console.log('Logout successful');
       
       // Trigger a storage event to ensure all tabs are updated
       window.localStorage.setItem('auth_timestamp', Date.now().toString());
       
-      // Add a small delay to ensure cookies are cleared before redirect
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
       router.push('/');
       router.refresh();
     } catch (error) {
-      // Silent error handling for security
+      console.error('Logout error:', error);
     } finally {
       setIsLoading(false);
     }
