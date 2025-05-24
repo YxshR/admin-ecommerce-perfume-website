@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { encrypt } from '@/app/lib/auth';
+import { setAuthCookies } from '@/app/lib/auth';
 import User from '@/app/models/User';
 import bcrypt from 'bcryptjs';
 import connectMongoDB from '@/app/lib/mongodb';
@@ -66,17 +67,25 @@ export async function POST(request: Request) {
       userId
     });
     
-    // Return the token in the response
-    return NextResponse.json({ 
+    // Create a user object to return
+    const userData = {
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      userId
+    };
+    
+    // Create a response with the token in an HTTP-only cookie
+    const response = NextResponse.json({ 
       success: true,
       token,
-      user: {
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        userId
-      }
+      user: userData
     });
+    
+    // Set auth cookies properly
+    setAuthCookies(response, userData, token);
+    
+    return response;
     
   } catch (error) {
     return NextResponse.json(
