@@ -20,9 +20,9 @@ ADMIN_EMAIL=avitoluxury@gmail.com
 ADMIN_PHONE=8126518755
 
 # Twilio Configuration for SMS OTP
-TWILIO_ACCOUNT_SID=AC5ce650562b68c5e32e3864e1f1fa5e97
+TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=your-twilio-auth-token
-TWILIO_VERIFY_SERVICE_SID=VA6d30f761fb32414863edfb815f56ed05
+TWILIO_VERIFY_SERVICE_SID=
 ```
 
 ## Important Notes:
@@ -43,7 +43,7 @@ TWILIO_VERIFY_SERVICE_SID=VA6d30f761fb32414863edfb815f56ed05
 2. Obtain your Account SID and Auth Token from the Twilio console dashboard
 3. For the Verify service:
    - Navigate to Verify in the Twilio console
-   - Create a new Verify service or use the existing one (VA6d30f761fb32414863edfb815f56ed05)
+   - Create a new Verify service or use the existing one ()
    - Copy the Service SID to the TWILIO_VERIFY_SERVICE_SID variable
 4. Set the `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_VERIFY_SERVICE_SID` in your `.env.local` file
 5. For production use, ensure your Twilio account is upgraded (not in trial mode)
