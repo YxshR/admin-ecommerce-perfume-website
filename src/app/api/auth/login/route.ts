@@ -148,16 +148,21 @@ export async function POST(request: NextRequest) {
       userId: userId
     });
     
-    // Create a response object with cache control headers
+    // User object to be returned
+    const userData = {
+      email: user.email,
+      name: user.name,
+      role: user.role || 'user',
+      userId: userId
+    };
+    
+    // Create a response object with cache control headers and include token in the response
+    // This helps with backward compatibility for clients that expect the token in the response
     const response = NextResponse.json(
       { 
         success: true,
-        user: {
-          email: user.email,
-          name: user.name,
-          role: user.role || 'user',
-          userId: userId
-        }
+        user: userData,
+        token: token // Include token in response for backward compatibility
       },
       {
         headers: {

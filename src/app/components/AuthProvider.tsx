@@ -40,20 +40,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .find(row => row.startsWith('isLoggedIn='))
         ?.split('=')[1];
       
-      if (loginStatus?.startsWith('true')) {
+      // Now supports both formats: 'true' and 'true.{timestamp}'
+      if (loginStatus && (loginStatus === 'true' || loginStatus.startsWith('true.'))) {
         // Get user data from cookie
         const userDataCookie = document.cookie
           .split('; ')
           .find(row => row.startsWith('userData='))
           ?.split('=')[1];
         
+        // Check session storage for admin users (new method)
+        const sessionUser = sessionStorage.getItem('user');
+        
+        // Check local storage for regular users (old method)
+        const localUser = localStorage.getItem('user');
+        
+        // Determine which user data to use
+        let userData = null;
+        
         if (userDataCookie) {
           try {
-            const userData = JSON.parse(decodeURIComponent(userDataCookie));
-            setUser(userData);
-          } catch (parseError) {
-            setUser(null);
+            userData = JSON.parse(decodeURIComponent(userDataCookie));
+          } catch (error) {
+            // Silent error handling
           }
+        } else if (sessionUser) {
+          try {
+            userData = JSON.parse(sessionUser);
+          } catch (error) {
+            // Silent error handling
+          }
+        } else if (localUser) {
+          try {
+            userData = JSON.parse(localUser);
+          } catch (error) {
+            // Silent error handling
+          }
+        }
+        
+        if (userData) {
+          setUser(userData);
         } else {
           setUser(null);
         }
@@ -95,7 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
         body: JSON.stringify({ email, password }),
         credentials: 'include', // Important for cookies
@@ -118,6 +144,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       
       if (data.success) {
+        // Store user data in both localStorage (for backward compatibility)
+        // and sessionStorage (for newer security model)
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+          sessionStorage.setItem('user', JSON.stringify(data.user));
+          
+          if (data.token) {
+            localStorage.setItem('token', data.token);
+            sessionStorage.setItem('token', data.token);
+          }
+          
+          const timestamp = Date.now().toString();
+          localStorage.setItem('token_timestamp', timestamp);
+          sessionStorage.setItem('token_timestamp', timestamp);
+        }
+        
         // Immediately update the user state after successful login
         setUser(data.user);
         
@@ -126,6 +168,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Directly call checkAuth to ensure state is updated immediately
         checkAuth();
+        
+        // Add a small delay to make sure cookies are properly set
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Handle redirect logic in this order:
         // 1. Use explicitly provided redirectPath (from function parameter)
@@ -180,6 +225,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cache: 'no-store'
       });
       
+      // Clear client-side storage - both types
+      // Clear localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token_timestamp');
+      
+      // Clear sessionStorage
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('token_timestamp');
+      
       // Clear client-side cookies
       document.cookie = 'isLoggedIn=; Path=/; Max-Age=0; SameSite=Lax';
       document.cookie = 'userData=; Path=/; Max-Age=0; SameSite=Lax';
@@ -188,6 +244,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Trigger a storage event to ensure all tabs are updated
       window.localStorage.setItem('auth_timestamp', Date.now().toString());
+      
+      // Add a small delay to ensure cookies are cleared before redirect
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       router.push('/');
       router.refresh();
