@@ -347,7 +347,7 @@ export default function Nav() {
               <Link 
                 href="/" 
                 className={`text-sm font-medium uppercase tracking-wider ${
-                  pathname === '/' || pathname === '/store'
+                  pathname === '/' || pathname === '/store' || pathname === '/store-routes'
                     ? 'text-black' 
                     : 'text-gray-600 hover:text-black'
                 }`}
@@ -472,7 +472,7 @@ export default function Nav() {
                   <Link 
                     href="/" 
                     className={`text-sm font-medium uppercase py-2 ${
-                      pathname === '/' || pathname.startsWith('/store') 
+                      pathname === '/' || pathname.startsWith('/store-routes') 
                         ? 'text-black' 
                         : 'text-gray-600'
                     }`}

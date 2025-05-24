@@ -33,6 +33,25 @@ const nextConfig = {
     optimizeCss: true,
   },
   serverExternalPackages: [],
+  async redirects() {
+    return [
+      {
+        source: '/store',
+        destination: '/store-routes/store',
+        permanent: true,
+      },
+      {
+        source: '/store/:path*',
+        destination: '/store-routes/store/:path*',
+        permanent: true,
+      },
+      {
+        source: '/product/:path*',
+        destination: '/store-routes/product/:path*',
+        permanent: true,
+      }
+    ]
+  }
 };
 
 module.exports = nextConfig; 

@@ -17,11 +17,11 @@ export default function Home() {
         router.push('/admin/dashboard');
       } else {
         // For regular users, redirect to store
-        router.push('/store');
+        router.push('/store-routes');
       }
     } else {
       // For non-logged-in users, redirect to store
-      router.push('/store');
+      router.push('/store-routes');
     }
   }, [router]);
   
