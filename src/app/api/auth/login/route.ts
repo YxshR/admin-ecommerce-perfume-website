@@ -145,11 +145,11 @@ export async function POST(request: NextRequest) {
     // Create a response object with cache control headers
     const response = NextResponse.json(
       { 
-        success: true,
-        user: {
-          email: user.email,
-          name: user.name,
-          role: user.role || 'user',
+      success: true,
+      user: {
+        email: user.email,
+        name: user.name,
+        role: user.role || 'user',
           userId: userId
         }
       },
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
           'X-Content-Type-Options': 'nosniff',
           'X-Frame-Options': 'DENY',
           'X-XSS-Protection': '1; mode=block'
-        }
+      }
       }
     );
     

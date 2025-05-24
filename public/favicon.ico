@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="black"/>
+  <!-- Triangular logo mark -->
+  <g transform="translate(4, 4) scale(0.15)">
+    <!-- First triangle -->
+    <polygon points="75,0 0,100 45,100" fill="white" />
+    <!-- Second triangle -->
+    <polygon points="75,0 105,100 150,100" fill="white" />
+    <!-- Connecting line -->
+    <polygon points="45,60 75,20 105,60 75,100" fill="white" />
+  </g>
+</svg> 

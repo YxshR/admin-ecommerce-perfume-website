@@ -15,8 +15,14 @@ EMAIL_PASSWORD=your-app-password
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 
-# Admin Email
+# Admin Credentials
 ADMIN_EMAIL=avitoluxury@gmail.com
+ADMIN_PHONE=8126518755
+
+# Twilio Configuration for SMS OTP
+TWILIO_ACCOUNT_SID=AC5ce650562b68c5e32e3864e1f1fa5e97
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_VERIFY_SERVICE_SID=VA6d30f761fb32414863edfb815f56ed05
 ```
 
 ## Important Notes:
@@ -32,13 +38,26 @@ ADMIN_EMAIL=avitoluxury@gmail.com
    - Name it "Avito Admin OTP" or similar
    - Copy the generated 16-character password
 
+### For Twilio Verify:
+1. Sign up for a Twilio account at https://www.twilio.com/
+2. Obtain your Account SID and Auth Token from the Twilio console dashboard
+3. For the Verify service:
+   - Navigate to Verify in the Twilio console
+   - Create a new Verify service or use the existing one (VA6d30f761fb32414863edfb815f56ed05)
+   - Copy the Service SID to the TWILIO_VERIFY_SERVICE_SID variable
+4. Set the `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_VERIFY_SERVICE_SID` in your `.env.local` file
+5. For production use, ensure your Twilio account is upgraded (not in trial mode)
+6. Add test phone numbers to your Twilio verified numbers list if in trial mode
+
 ### Security:
 - Never commit your `.env.local` file to version control
 - Keep your JWT_SECRET secure and complex
 - Ensure that your MongoDB connection string is properly secured
+- Protect your Twilio credentials
 
 ### MongoDB Setup:
-- Make sure your MongoDB database has the required collections: Users, Products, Orders, AdminOTP
+- Make sure your MongoDB database has the required collections: Users, Products, Orders
 - The Admin user should have the role field set to "admin"
+- For SMS OTP login, ensure the admin user has the correct phone number in the database
 
 After setting up the `.env.local` file, restart your development server for the changes to take effect. 

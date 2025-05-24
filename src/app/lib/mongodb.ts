@@ -28,10 +28,18 @@ async function connectMongoDB() {
       throw new Error('MONGODB_URI not defined in environment variables');
     }
 
+    console.log('Connecting to MongoDB...');
+    
     // Otherwise establish a new connection
-    const db = await mongoose.connect(MONGODB_URI);
+    const db = await mongoose.connect(MONGODB_URI, {
+      // Add connection options for better stability
+      serverSelectionTimeoutMS: 30000, // 30 seconds
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 60000,
+    });
     
     isConnected = true;
+    console.log('Connected to MongoDB database:', db.connection.db?.databaseName || 'unknown');
     
     return db;
   } catch (error) {

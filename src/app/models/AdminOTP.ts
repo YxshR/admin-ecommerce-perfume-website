@@ -2,23 +2,36 @@ import mongoose, { Schema } from 'mongoose';
 
 // Define the interface for AdminOTP document
 interface IAdminOTP {
-  email: string;
+  email?: string;
+  phone?: string;
   otp: string;
   expiresAt: Date;
   createdAt: Date;
+  method: 'email' | 'sms';
 }
 
 // Create the schema
 const AdminOTPSchema = new Schema<IAdminOTP>({
   email: { 
     type: String, 
-    required: true,
     lowercase: true,
-    trim: true
+    trim: true,
+    sparse: true // Allow null/undefined while maintaining uniqueness
+  },
+  phone: {
+    type: String,
+    trim: true,
+    sparse: true // Allow null/undefined while maintaining uniqueness
   },
   otp: { 
     type: String, 
     required: true 
+  },
+  method: {
+    type: String,
+    enum: ['email', 'sms'],
+    required: true,
+    default: 'email'
   },
   expiresAt: { 
     type: Date, 
@@ -36,6 +49,7 @@ const AdminOTPSchema = new Schema<IAdminOTP>({
 
 // Create indexes
 AdminOTPSchema.index({ email: 1 });
+AdminOTPSchema.index({ phone: 1 });
 AdminOTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for automatic document cleanup
 
 // Define a method to check if OTP is valid

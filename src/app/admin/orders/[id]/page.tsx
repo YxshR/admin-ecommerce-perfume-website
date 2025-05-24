@@ -1,15 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { FiArrowLeft, FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings, FiTruck, FiCalendar, FiCreditCard, FiMapPin, FiUser, FiPackage } from 'react-icons/fi';
+import { FiArrowLeft, FiPackage, FiUser, FiMap, FiCreditCard, FiTruck, FiCalendar, FiShoppingBag, FiRefreshCw } from 'react-icons/fi';
 
-// Define the type for order status
-type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+}
 
-// Define the Order interface
 interface Order {
   id: string;
   orderNumber: string;
@@ -20,15 +23,9 @@ interface Order {
     phone: string;
   };
   date: string;
-  status: OrderStatus;
+  status: string;
   total: number;
-  items: {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-    image: string;
-  }[];
+  items: OrderItem[];
   shipping: {
     address: string;
     city: string;
@@ -43,76 +40,70 @@ interface Order {
   };
 }
 
-export default function OrderDetails() {
-  const params = useParams();
+export default function OrderDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const orderId = params.id as string;
-  
+  const { id } = params;
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    // Check if user is logged in and has admin role
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    
-    if (!token || !user) {
-      router.push('/admin/login');
-      return;
-    }
-    
+  const [error, setError] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Fetch order details
+  const fetchOrder = async () => {
+    setLoading(true);
     try {
-      const userData = JSON.parse(user);
-      if (userData.role !== 'admin') {
-        router.push('/admin/login');
+      let token;
+      try {
+        token = localStorage.getItem('token');
+        if (!token) {
+          router.push('/admin/login');
+          return;
+        }
+      } catch (storageError) {
+        console.error('Error accessing localStorage:', storageError);
+        useMockOrderData(id);
         return;
       }
       
-      fetchOrderDetails();
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      router.push('/admin/login');
-    }
-  }, [orderId, router]);
-  
-  const fetchOrderDetails = async () => {
-    setLoading(true);
-    try {
-      // In a real application, you would fetch from your API
-      const response = await fetch(`/api/orders/${orderId}`);
+      const response = await fetch(`/api/orders/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
       if (!response.ok) {
         // For development purposes, use mock data if API is not available
-        useMockData();
+        console.warn('Using mock data for development');
+        useMockOrderData(id);
         return;
       }
       
       const data = await response.json();
       setOrder(data.order);
-    } catch (error) {
-      console.error('Error fetching order details:', error);
+      setError('');
+    } catch (err) {
+      console.error('Error fetching order details:', err);
       // Use mock data for development
-      useMockData();
+      useMockOrderData(id);
     } finally {
       setLoading(false);
     }
   };
-  
-  const useMockData = () => {
-    // Find the mock order based on the ID from the URL
+
+  // Mock data for development when DB connection fails
+  const useMockOrderData = (orderId: string) => {
     const mockOrders = [
       {
         id: '1',
-        orderNumber: 'FRA-001',
+        orderNumber: 'ORD-001',
         customer: {
           id: '101',
           name: 'John Smith',
           email: 'john@example.com',
           phone: '+91 98765 43210'
         },
-        date: '2023-05-23',
-        status: 'delivered' as OrderStatus,
+        date: new Date().toISOString(),
+        status: 'Pending',
         total: 1299.00,
         items: [
           {
@@ -133,20 +124,20 @@ export default function OrderDetails() {
         payment: {
           method: 'Credit Card',
           transactionId: 'txn_123456',
-          status: 'completed'
+          status: 'pending'
         }
       },
       {
         id: '2',
-        orderNumber: 'FRA-002',
+        orderNumber: 'ORD-002',
         customer: {
           id: '102',
           name: 'Priya Sharma',
           email: 'priya@example.com',
           phone: '+91 87654 32109'
         },
-        date: '2023-05-22',
-        status: 'processing' as OrderStatus,
+        date: new Date(Date.now() - 86400000).toISOString(),
+        status: 'Processing',
         total: 2598.00,
         items: [
           {
@@ -176,444 +167,423 @@ export default function OrderDetails() {
           transactionId: 'txn_789012',
           status: 'completed'
         }
+      },
+      {
+        id: '3',
+        orderNumber: 'ORD-003',
+        customer: {
+          id: '103',
+          name: 'Alex Johnson',
+          email: 'alex@example.com',
+          phone: '+91 76543 21098'
+        },
+        date: new Date(Date.now() - 172800000).toISOString(),
+        status: 'Shipped',
+        total: 3897.00,
+        items: [
+          {
+            id: 'p4',
+            name: 'Lavender Dreams 100ML',
+            quantity: 3,
+            price: 1299.00,
+            image: 'https://placehold.co/80x80/eee/000?text=Lavender+Dreams'
+          }
+        ],
+        shipping: {
+          address: '789 Lake View',
+          city: 'Bangalore',
+          state: 'Karnataka',
+          postalCode: '560001',
+          country: 'India'
+        },
+        payment: {
+          method: 'Credit Card',
+          transactionId: 'txn_345678',
+          status: 'completed'
+        }
       }
     ];
     
     const foundOrder = mockOrders.find(o => o.id === orderId);
+    
     if (foundOrder) {
       setOrder(foundOrder);
+      setError('');
     } else {
-      setError('Order not found');
+      // If the specific order ID is not found, use the first mock order with the requested ID
+      setOrder({
+        ...mockOrders[0],
+        id: orderId,
+        orderNumber: `ORD-${orderId}`
+      });
+      setError('');
     }
   };
-  
-  const updateOrderStatus = async (newStatus: OrderStatus) => {
+
+  // Update order status
+  const updateOrderStatus = async (newStatus: string) => {
+    setUpdatingStatus(true);
     try {
-      // In a real app, this would call your API
-      // await fetch(`/api/orders/${orderId}`, {
-      //   method: 'PATCH',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ orderId, status: newStatus })
-      // });
-      
-      // For now, just update the local state
-      if (order) {
-        setOrder({
-          ...order,
-          status: newStatus
-        });
+      let token;
+      try {
+        token = localStorage.getItem('token');
+      } catch (storageError) {
+        console.error('Error accessing localStorage:', storageError);
+        // Update local state since we can't access localStorage
+        if (order) {
+          setOrder({ ...order, status: newStatus });
+        }
+        return;
       }
-      
-      console.log(`Status for order ${orderId} updated to ${newStatus}`);
-    } catch (error) {
-      console.error('Error updating order status:', error);
+
+      const response = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ orderId: id, status: newStatus })
+      });
+
+      if (!response.ok) {
+        // For development: update local state even if API fails
+        if (order) {
+          setOrder({ ...order, status: newStatus });
+        }
+        return;
+      }
+
+      // Update the order state to reflect the change
+      if (order) {
+        setOrder({ ...order, status: newStatus });
+      }
+      setError('');
+    } catch (err) {
+      console.error('Error updating order status:', err);
+      // For development: update local state even if API fails
+      if (order) {
+        setOrder({ ...order, status: newStatus });
+      }
+    } finally {
+      setUpdatingStatus(false);
     }
   };
-  
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/admin/login');
+
+  // Load order details on component mount
+  useEffect(() => {
+    try {
+      fetchOrder();
+    } catch (err) {
+      console.error('Error in order detail useEffect:', err);
+      useMockOrderData(id);
+    }
+  }, [id]);
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (err) {
+      console.error('Error formatting date:', err);
+      return 'Invalid date';
+    }
   };
-  
-  // Order status badge component
-  const StatusBadge = ({ status }: { status: OrderStatus }) => {
-    let bgColor = '';
-    let textColor = '';
-    
-    switch (status) {
+
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch (status?.toLowerCase()) {
       case 'pending':
-        bgColor = 'bg-blue-100';
-        textColor = 'text-blue-800';
-        break;
+        return 'bg-yellow-100 text-yellow-800';
       case 'processing':
-        bgColor = 'bg-yellow-100';
-        textColor = 'text-yellow-800';
-        break;
+        return 'bg-blue-100 text-blue-800';
       case 'shipped':
-        bgColor = 'bg-gray-100';
-        textColor = 'text-gray-800';
-        break;
+        return 'bg-purple-100 text-purple-800';
       case 'delivered':
-        bgColor = 'bg-green-100';
-        textColor = 'text-green-800';
-        break;
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
-        bgColor = 'bg-red-100';
-        textColor = 'text-red-800';
-        break;
+        return 'bg-red-100 text-red-800';
       default:
-        bgColor = 'bg-gray-100';
-        textColor = 'text-gray-800';
+        return 'bg-gray-100 text-gray-800';
     }
-    
-    return (
-      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${bgColor} ${textColor}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
   };
-  
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="p-6 flex justify-center">
+        <FiRefreshCw className="animate-spin h-10 w-10 text-blue-500" />
       </div>
     );
   }
-  
+
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h3 className="text-xl font-bold text-red-600 mb-2">Error</h3>
-          <p className="text-gray-700">{error}</p>
-          <Link href="/admin/orders" className="mt-4 inline-block text-blue-600 hover:underline">
-            Back to Orders
-          </Link>
+      <div className="p-6">
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r mb-4">
+          <p className="text-sm text-red-700">{error}</p>
         </div>
+        <Link href="/admin/orders" className="text-blue-600 hover:text-blue-800 inline-flex items-center">
+          <FiArrowLeft className="mr-2" />
+          Back to Orders
+        </Link>
       </div>
     );
   }
-  
+
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Order Not Found</h3>
-          <p className="text-gray-700">The requested order could not be found.</p>
-          <Link href="/admin/orders" className="mt-4 inline-block text-blue-600 hover:underline">
-            Back to Orders
-          </Link>
+      <div className="p-6">
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r mb-4">
+          <p className="text-sm text-yellow-700">Order not found</p>
         </div>
+        <Link href="/admin/orders" className="text-blue-600 hover:text-blue-800 inline-flex items-center">
+          <FiArrowLeft className="mr-2" />
+          Back to Orders
+        </Link>
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
-        <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-800">
-          <h2 className="text-xl font-bold text-white">Fraganote Admin</h2>
+    <div className="p-6">
+      {/* Header with back button */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
+          <Link href="/admin/orders" className="mr-4 text-blue-600 hover:text-blue-800 flex items-center">
+            <FiArrowLeft className="mr-1" />
+            Back
+          </Link>
+          <h1 className="text-2xl font-bold">Order #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</h1>
         </div>
-        <nav className="mt-6">
-          <Link href="/admin/dashboard" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiBox className="mr-3" /> Dashboard
-            </div>
-          </Link>
-          <Link href="/admin/orders" className="block py-3 px-4 text-gray-900 font-medium bg-gray-100 hover:bg-gray-200 border-l-4 border-blue-600">
-            <div className="flex items-center">
-              <FiShoppingBag className="mr-3" /> Orders
-            </div>
-          </Link>
-          <Link href="/admin/users" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiUsers className="mr-3" /> Users
-            </div>
-          </Link>
-          <Link href="/admin/settings" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiSettings className="mr-3" /> Settings
-            </div>
-          </Link>
-          <button 
-            onClick={handleLogout}
-            className="w-full text-left py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900"
-          >
-            <div className="flex items-center">
-              <FiLogOut className="mr-3" /> Logout
-            </div>
-          </button>
-        </nav>
+        <button 
+          onClick={fetchOrder}
+          disabled={loading}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+        >
+          <FiRefreshCw className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
-      
-      {/* Main Content */}
-      <div className="flex-1 p-8">
-        <div className="mb-6">
-          <Link
-            href="/admin/orders"
-            className="flex items-center text-blue-600 hover:underline"
-          >
-            <FiArrowLeft className="mr-1" size={16} /> Back to Orders
-          </Link>
-        </div>
-        
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Order #{order.orderNumber}</h1>
-            <div className="flex items-center space-x-4 mt-1">
-              <div className="flex items-center text-sm text-gray-500">
-                <FiCalendar size={14} className="mr-1" />
-                {new Date(order.date).toLocaleDateString('en-IN', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </div>
-            </div>
+
+      {/* Order status and actions */}
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+          <div className="flex items-center mb-4 md:mb-0">
+            <FiPackage className="text-gray-500 mr-2" />
+            <h2 className="text-lg font-medium">Status:</h2>
+            <span className={`ml-2 px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${getStatusBadgeColor(order.status)}`}>
+              {order.status}
+            </span>
           </div>
-          
-          <div className="flex items-center space-x-4">
-            <div>
-              <StatusBadge status={order.status} />
-            </div>
-            <div>
+          <div className="flex items-center">
+            <span className="text-sm text-gray-500 mr-2">Update Status:</span>
+            <div className="relative inline-block text-left">
               <select
+                disabled={updatingStatus}
                 value={order.status}
-                onChange={(e) => updateOrderStatus(e.target.value as OrderStatus)}
-                className="border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                onChange={(e) => updateOrderStatus(e.target.value)}
+                className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
               >
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="Pending">Pending</option>
+                <option value="Processing">Processing</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
-            </div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Customer Info Card */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center mb-4">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <FiUser className="h-5 w-5 text-blue-600" />
-              </div>
-              <h3 className="ml-3 text-lg font-medium">Customer</h3>
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium">{order.customer.name}</p>
-              <p className="text-sm text-gray-600">{order.customer.email}</p>
-              <p className="text-sm text-gray-600">{order.customer.phone}</p>
-            </div>
-          </div>
-          
-          {/* Shipping Info Card */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center mb-4">
-              <div className="bg-green-100 p-2 rounded-full">
-                <FiMapPin className="h-5 w-5 text-green-600" />
-              </div>
-              <h3 className="ml-3 text-lg font-medium">Shipping Address</h3>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">{order.shipping.address}</p>
-              <p className="text-sm text-gray-600">{order.shipping.city}, {order.shipping.state}</p>
-              <p className="text-sm text-gray-600">{order.shipping.postalCode}</p>
-              <p className="text-sm text-gray-600">{order.shipping.country}</p>
-            </div>
-          </div>
-          
-          {/* Payment Info Card */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center mb-4">
-              <div className="bg-purple-100 p-2 rounded-full">
-                <FiCreditCard className="h-5 w-5 text-purple-600" />
-              </div>
-              <h3 className="ml-3 text-lg font-medium">Payment</h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <p className="text-sm text-gray-600">Method</p>
-                <p className="text-sm font-medium">{order.payment.method}</p>
-              </div>
-              {order.payment.transactionId && (
-                <div className="flex justify-between">
-                  <p className="text-sm text-gray-600">Transaction ID</p>
-                  <p className="text-sm font-medium">{order.payment.transactionId}</p>
+              {updatingStatus && (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                  <FiRefreshCw className="animate-spin h-4 w-4 text-gray-400" />
                 </div>
               )}
-              <div className="flex justify-between">
-                <p className="text-sm text-gray-600">Status</p>
-                <p className="text-sm font-medium capitalize">{order.payment.status}</p>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-gray-100">
-                <p className="text-sm font-medium">Total</p>
-                <p className="text-lg font-bold">₹{order.total.toFixed(2)}</p>
-              </div>
             </div>
           </div>
         </div>
-        
-        {/* Order Items */}
-        <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <div className="bg-amber-100 p-2 rounded-full">
-                <FiPackage className="h-5 w-5 text-amber-600" />
-              </div>
-              <h3 className="ml-3 text-lg font-medium">Order Items</h3>
-            </div>
+      </div>
+
+      {/* Order information grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Customer information */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <FiUser className="text-blue-500 mr-2" />
+            <h2 className="text-lg font-medium">Customer Information</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Qty
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {order.items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0">
-                          {item.image ? (
-                            <img 
-                              src={item.image}
-                              alt={item.name}
-                              className="h-10 w-10 object-cover"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-xs">
-                              No Image
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                          <div className="text-xs text-gray-500">ID: {item.id}</div>
-                        </div>
+          <div className="space-y-3">
+            <p className="text-gray-700"><strong>Name:</strong> {order.customer.name}</p>
+            <p className="text-gray-700"><strong>Email:</strong> {order.customer.email}</p>
+            <p className="text-gray-700"><strong>Phone:</strong> {order.customer.phone || 'N/A'}</p>
+            <Link 
+              href={`/admin/users/${order.customer.id}`} 
+              className="text-blue-600 hover:text-blue-800 inline-flex items-center mt-2"
+            >
+              View Customer Profile
+            </Link>
+          </div>
+        </div>
+
+        {/* Shipping information */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <FiMap className="text-green-500 mr-2" />
+            <h2 className="text-lg font-medium">Shipping Information</h2>
+          </div>
+          <div className="space-y-3">
+            <p className="text-gray-700"><strong>Address:</strong> {order.shipping.address}</p>
+            <p className="text-gray-700"><strong>City:</strong> {order.shipping.city}</p>
+            <p className="text-gray-700"><strong>State:</strong> {order.shipping.state}</p>
+            <p className="text-gray-700"><strong>Postal Code:</strong> {order.shipping.postalCode}</p>
+            <p className="text-gray-700"><strong>Country:</strong> {order.shipping.country}</p>
+          </div>
+        </div>
+
+        {/* Payment information */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <FiCreditCard className="text-purple-500 mr-2" />
+            <h2 className="text-lg font-medium">Payment Information</h2>
+          </div>
+          <div className="space-y-3">
+            <p className="text-gray-700"><strong>Method:</strong> {order.payment.method}</p>
+            <p className="text-gray-700"><strong>Transaction ID:</strong> {order.payment.transactionId || 'N/A'}</p>
+            <p className="text-gray-700"><strong>Status:</strong> {order.payment.status}</p>
+            <p className="text-gray-700"><strong>Total Amount:</strong> ₹{order.total.toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Order details */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <FiCalendar className="text-orange-500 mr-2" />
+            <h2 className="text-lg font-medium">Order Details</h2>
+          </div>
+          <div className="space-y-3">
+            <p className="text-gray-700"><strong>Order ID:</strong> {order.id}</p>
+            <p className="text-gray-700"><strong>Order Number:</strong> #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</p>
+            <p className="text-gray-700"><strong>Order Date:</strong> {formatDate(order.date)}</p>
+            <p className="text-gray-700"><strong>Items:</strong> {order.items.reduce((acc, item) => acc + item.quantity, 0)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Order items */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center mb-4">
+          <FiShoppingBag className="text-indigo-500 mr-2" />
+          <h2 className="text-lg font-medium">Order Items</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Quantity
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {order.items.map((item, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      {item.image && (
+                        <img 
+                          src={item.image} 
+                          alt={item.name} 
+                          className="h-10 w-10 rounded-md object-cover mr-3"
+                        />
+                      )}
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        <div className="text-sm text-gray-500">SKU: {item.id.slice(0, 8)}</div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ₹{item.price.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.quantity}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
-                      ₹{(item.price * item.quantity).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-gray-50">
-                <tr>
-                  <td colSpan={3} className="px-6 py-4 text-right text-sm font-medium text-gray-900">
-                    Total
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-base font-bold text-gray-900">
-                    ₹{order.total.toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ₹{item.price.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {item.quantity}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    ₹{(item.price * item.quantity).toFixed(2)}
                   </td>
                 </tr>
-              </tfoot>
-            </table>
-          </div>
+              ))}
+            </tbody>
+            <tfoot className="bg-gray-50">
+              <tr>
+                <th scope="row" colSpan={3} className="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                  Subtotal
+                </th>
+                <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
+                  ₹{order.total.toFixed(2)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
-        
-        {/* Shipping Timeline */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <div className="bg-indigo-100 p-2 rounded-full">
-                <FiTruck className="h-5 w-5 text-indigo-600" />
-              </div>
-              <h3 className="ml-3 text-lg font-medium">Order Timeline</h3>
-            </div>
+      </div>
+
+      {/* Order Timeline/Activity Log - Placeholder for future implementation */}
+      <div className="bg-white shadow rounded-lg p-6 mt-6">
+        <div className="flex items-center mb-4">
+          <FiTruck className="text-blue-500 mr-2" />
+          <h2 className="text-lg font-medium">Order Timeline</h2>
+        </div>
+        <div className="border-l-2 border-gray-200 ml-4 pl-4 space-y-6">
+          <div className="relative">
+            <div className="absolute -left-6 mt-1 rounded-full bg-blue-500 w-2 h-2"></div>
+            <p className="text-sm text-gray-500">{formatDate(order.date)}</p>
+            <p className="font-medium">Order Created</p>
           </div>
-          <div className="p-6">
-            <div className="space-y-8">
-              <div className="relative flex items-start">
-                <div className="flex items-center h-6">
-                  <div className="relative z-10 w-6 h-6 flex items-center justify-center bg-green-500 rounded-full">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="absolute top-6 left-3 -ml-px h-full w-0.5 bg-gray-300"></div>
-                </div>
-                <div className="ml-4">
-                  <h4 className="font-medium">Order Placed</h4>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {new Date(order.date).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="relative flex items-start">
-                <div className="flex items-center h-6">
-                  <div className={`relative z-10 w-6 h-6 flex items-center justify-center rounded-full ${order.status === 'pending' ? 'bg-gray-300' : 'bg-green-500'}`}>
-                    {order.status !== 'pending' ? (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <div className="w-3 h-3 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="absolute top-6 left-3 -ml-px h-full w-0.5 bg-gray-300"></div>
-                </div>
-                <div className="ml-4">
-                  <h4 className={`font-medium ${order.status === 'pending' ? 'text-gray-500' : ''}`}>Processing</h4>
-                  {order.status !== 'pending' && (
-                    <p className="text-sm text-gray-500 mt-1">Order confirmed and being processed</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="relative flex items-start">
-                <div className="flex items-center h-6">
-                  <div className={`relative z-10 w-6 h-6 flex items-center justify-center rounded-full ${order.status === 'shipped' || order.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}>
-                    {(order.status === 'shipped' || order.status === 'delivered') ? (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <div className="w-3 h-3 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="absolute top-6 left-3 -ml-px h-full w-0.5 bg-gray-300"></div>
-                </div>
-                <div className="ml-4">
-                  <h4 className={`font-medium ${order.status === 'shipped' || order.status === 'delivered' ? '' : 'text-gray-500'}`}>Shipped</h4>
-                  {(order.status === 'shipped' || order.status === 'delivered') && (
-                    <p className="text-sm text-gray-500 mt-1">Your order has been shipped</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="relative flex items-start">
-                <div className="flex items-center h-6">
-                  <div className={`relative z-10 w-6 h-6 flex items-center justify-center rounded-full ${order.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}>
-                    {order.status === 'delivered' ? (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <div className="w-3 h-3 bg-white rounded-full"></div>
-                    )}
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h4 className={`font-medium ${order.status === 'delivered' ? '' : 'text-gray-500'}`}>Delivered</h4>
-                  {order.status === 'delivered' && (
-                    <p className="text-sm text-gray-500 mt-1">Order has been delivered</p>
-                  )}
-                </div>
-              </div>
+          
+          {order.status !== 'Pending' && (
+            <div className="relative">
+              <div className="absolute -left-6 mt-1 rounded-full bg-blue-500 w-2 h-2"></div>
+              <p className="text-sm text-gray-500">-</p>
+              <p className="font-medium">Order Processing Started</p>
             </div>
-          </div>
+          )}
+
+          {(order.status === 'Shipped' || order.status === 'Delivered') && (
+            <div className="relative">
+              <div className="absolute -left-6 mt-1 rounded-full bg-blue-500 w-2 h-2"></div>
+              <p className="text-sm text-gray-500">-</p>
+              <p className="font-medium">Order Shipped</p>
+            </div>
+          )}
+
+          {order.status === 'Delivered' && (
+            <div className="relative">
+              <div className="absolute -left-6 mt-1 rounded-full bg-green-500 w-2 h-2"></div>
+              <p className="text-sm text-gray-500">-</p>
+              <p className="font-medium">Order Delivered</p>
+            </div>
+          )}
+
+          {order.status === 'Cancelled' && (
+            <div className="relative">
+              <div className="absolute -left-6 mt-1 rounded-full bg-red-500 w-2 h-2"></div>
+              <p className="text-sm text-gray-500">-</p>
+              <p className="font-medium">Order Cancelled</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

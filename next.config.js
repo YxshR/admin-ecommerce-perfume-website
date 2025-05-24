@@ -21,8 +21,10 @@ const nextConfig = {
   env: {
     GOOGLE_STORAGE_BUCKET_NAME: 'ecommerce-app-444531.appspot.com',
     GOOGLE_STORAGE_PROJECT_ID: 'ecommerce-app-444531',
-    // Updated MongoDB URI with a placeholder - replace with your actual working MongoDB URI
-    MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce',
+    MONGODB_URI: 'mongodb+srv://avitoluxury:l2AuSv97J5FW4ZvU@freetester.667mr8b.mongodb.net/ecommerce',
+    JWT_SECRET: 'fraganote_admin_secret_key_2025',
+    ADMIN_EMAIL: 'admin@example.com',
+    ADMIN_PHONE: '8126518755'
   },
   output: 'standalone',
   // Add experimental features to improve compatibility with Vercel deployments
@@ -31,41 +33,6 @@ const nextConfig = {
     optimizeCss: true,
   },
   serverExternalPackages: [],
-  // Add custom webpack configuration to handle client reference manifests
-  webpack: (config, { isServer, dev }) => {
-    // Fix for client reference manifest issues in app router
-    if (!isServer && !dev) {
-      config.plugins.push({
-        apply: (compiler) => {
-          compiler.hooks.afterEmit.tap('CopyClientReferenceManifest', (compilation) => {
-            // This ensures the client reference manifest is available in all directories
-            const fs = require('fs');
-            const path = require('path');
-            
-            try {
-              // Source manifest file
-              const sourceManifestPath = path.join(__dirname, '.next/server/app/page_client-reference-manifest.js');
-              
-              if (fs.existsSync(sourceManifestPath)) {
-                // Create (store) directory if it doesn't exist
-                const targetDir = path.join(__dirname, '.next/server/app/(store)');
-                if (!fs.existsSync(targetDir)) {
-                  fs.mkdirSync(targetDir, { recursive: true });
-                }
-                
-                // Copy the manifest file to the (store) directory
-                const targetManifestPath = path.join(targetDir, 'page_client-reference-manifest.js');
-                fs.copyFileSync(sourceManifestPath, targetManifestPath);
-              }
-            } catch (error) {
-              console.error('Error copying client reference manifest:', error);
-            }
-          });
-        }
-      });
-    }
-    return config;
-  },
 };
 
 module.exports = nextConfig; 

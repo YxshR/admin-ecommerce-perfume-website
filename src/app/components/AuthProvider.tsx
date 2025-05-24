@@ -43,27 +43,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   // Function to check authentication status
-  const checkAuth = () => {
-    try {
-      // Check for client-side cookie indicator
-      const loginStatus = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('isLoggedIn='))
-        ?.split('=')[1];
-      
-      if (loginStatus) {
-        // Get user data from cookie
-        const userDataCookie = document.cookie
+    const checkAuth = () => {
+      try {
+        // Check for client-side cookie indicator
+        const loginStatus = document.cookie
           .split('; ')
-          .find(row => row.startsWith('userData='))
+          .find(row => row.startsWith('isLoggedIn='))
           ?.split('=')[1];
         
-        if (userDataCookie) {
-          try {
-            const userData = JSON.parse(decodeURIComponent(userDataCookie));
+      if (loginStatus) {
+          // Get user data from cookie
+          const userDataCookie = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('userData='))
+            ?.split('=')[1];
+          
+          if (userDataCookie) {
+            try {
+              const userData = JSON.parse(decodeURIComponent(userDataCookie));
             secureLog('Auth check: User authenticated');
-            setUser(userData);
-          } catch (parseError) {
+              setUser(userData);
+            } catch (parseError) {
             secureLog('Auth error: Failed to parse user data');
             setUser(null);
           }
@@ -75,14 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         secureLog('Auth check: Not logged in');
         setUser(null);
       }
-    } catch (error) {
+      } catch (error) {
       secureLog('Auth error: Error checking authentication');
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
   // Check authentication status when component mounts
   useEffect(() => {
     checkAuth();
