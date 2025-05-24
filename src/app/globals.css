@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #272420;
+  --primary: #000000; /* Black */
+  --primary-hover: #333333; /* Darker Black */
+  --secondary: #272420; /* Rich Brown */
+  --accent: #272420; /* Dark accent */
+  --text-primary: #272420;
+  --text-secondary: #5c534b;
+  --card-bg: #ffffff;
+  --border-color: #e5e0d5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #272420;
+    --border-color: #e5e0d5;
+    --card-bg: #ffffff;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-playfair), serif;
+}
+
+/* Store specific styles */
+.store-page {
+  background-color: var(--background);
+}
+
+/* Button styling for store */
+.store-button {
+  background-color: var(--primary);
+  color: white;
+  transition: all 0.3s;
+  border: none;
+  font-weight: 500;
+}
+
+.store-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Premium card styling */
+.premium-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.premium-card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  transform: translateY(-5px);
+}
+
+/* Perfume product styling */
+.perfume-product {
+  position: relative;
+}
+
+.perfume-product::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(0,0,0,0.05), transparent);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Special offer section colors */
+.special-offer {
+  background: var(--primary);
+  color: white;
+}
+
+/* Marquee animation for announcement bar */
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  animation: marquee 15s linear infinite;
+  white-space: nowrap;
+  display: inline-block;
+  padding-left: 100%;
+}
+
+/* Premium button styling */
+.btn-premium {
+  background-color: var(--primary);
+  color: white;
+  transition: all 0.3s;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.btn-premium:hover {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  background-color: var(--primary-hover);
+}
+
+/* Exception for login/signup pages */
+.auth-page {
+  background: var(--background);
+}
+
+/* Sale tag styling */
+.sale-tag {
+  background-color: #000;
+  color: #fff;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
