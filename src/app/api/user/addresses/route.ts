@@ -12,10 +12,12 @@ export async function GET(request: Request) {
     const cookie = request.headers.get('cookie') || '';
     console.log('Cookie header present:', !!cookie);
     
-    const isLoggedIn = cookie.includes('isLoggedIn=true');
-    console.log('isLoggedIn cookie found:', isLoggedIn);
+    // Check for isLoggedIn cookie without assuming specific value
+    // The cookie value is a timestamp hash in the updated AuthProvider
+    const isLoggedInCookie = cookie.match(/isLoggedIn=([^;]+)/);
+    console.log('isLoggedIn cookie found:', !!isLoggedInCookie);
     
-    if (!isLoggedIn) {
+    if (!isLoggedInCookie) {
       console.log('User not logged in, returning 401');
       return NextResponse.json({ 
         success: false, 
@@ -124,9 +126,11 @@ export async function POST(request: Request) {
   try {
     // Get session from cookies
     const cookie = request.headers.get('cookie') || '';
-    const isLoggedIn = cookie.includes('isLoggedIn=true');
     
-    if (!isLoggedIn) {
+    // Check for isLoggedIn cookie without assuming specific value
+    const isLoggedInCookie = cookie.match(/isLoggedIn=([^;]+)/);
+    
+    if (!isLoggedInCookie) {
       return NextResponse.json({ 
         success: false, 
         error: 'Unauthorized - Please log in' 
@@ -222,101 +226,7 @@ export async function POST(request: Request) {
 }
 
 // DELETE endpoint to remove an address
-export async function DELETE(request: Request) {
-  try {
-    // Get session from cookies
-    const cookie = request.headers.get('cookie') || '';
-    const isLoggedIn = cookie.includes('isLoggedIn=true');
-    
-    if (!isLoggedIn) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized - Please log in' 
-      }, { status: 401 });
-    }
-    
-    // Extract user ID from cookies
-    const userDataCookieMatch = cookie.match(/userData=([^;]+)/);
-    if (!userDataCookieMatch) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'User data not found in cookies' 
-      }, { status: 401 });
-    }
-    
-    // Get the addressId from URL params
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
-    const addressId = searchParams.get('addressId');
-    
-    if (!addressId) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Address ID is required' 
-      }, { status: 400 });
-    }
-    
-    try {
-      const userData = JSON.parse(decodeURIComponent(userDataCookieMatch[1]));
-      const userId = userData.userId;
-      
-      // Connect to MongoDB
-      await connectMongoDB();
-      
-      // Find the user
-      const user = await User.findById(userId);
-      
-      if (!user) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'User not found' 
-        }, { status: 404 });
-      }
-      
-      // Check if user has addresses
-      if (!user.addresses || user.addresses.length === 0) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'No addresses found for this user' 
-        }, { status: 404 });
-      }
-      
-      // Check if the address exists
-      const addressIndex = user.addresses.findIndex((addr: any) => addr.addressId === addressId);
-      
-      if (addressIndex === -1) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Address not found' 
-        }, { status: 404 });
-      }
-      
-      // Check if it's the default address
-      const isDefault = user.addresses[addressIndex].isDefault;
-      
-      // Remove the address
-      user.addresses.splice(addressIndex, 1);
-      
-      // If the deleted address was the default one and there are other addresses left,
-      // set the first remaining address as default
-      if (isDefault && user.addresses.length > 0) {
-        user.addresses[0].isDefault = true;
-      }
-      
-      // Save the user
-      await user.save();
-      
-      return NextResponse.json({
-        success: true,
-        message: 'Address deleted successfully'
-      });
-    } catch (err) {
-      console.error('Error processing user data:', err);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid user data in cookie' 
-      }, { status: 400 });
-    }
+export async function DELETE(request: Request) {  try {    // Get session from cookies    const cookie = request.headers.get('cookie') || '';        // Check for isLoggedIn cookie without assuming specific value    const isLoggedInCookie = cookie.match(/isLoggedIn=([^;]+)/);        if (!isLoggedInCookie) {      return NextResponse.json({         success: false,         error: 'Unauthorized - Please log in'       }, { status: 401 });    }        // Get the addressId from URL params    const url = new URL(request.url);    const addressId = url.searchParams.get('addressId');        if (!addressId) {      return NextResponse.json({         success: false,         error: 'Address ID is required'       }, { status: 400 });    }        // Extract user ID from cookies    const userDataCookieMatch = cookie.match(/userData=([^;]+)/);    if (!userDataCookieMatch) {      return NextResponse.json({         success: false,         error: 'User data not found in cookies'       }, { status: 401 });    }        try {      const userData = JSON.parse(decodeURIComponent(userDataCookieMatch[1]));      const userId = userData.userId;            // Connect to MongoDB      await connectMongoDB();            // Find the user      const user = await User.findById(userId);            if (!user) {        return NextResponse.json({           success: false,           error: 'User not found'         }, { status: 404 });      }            // Check if user has addresses      if (!user.addresses || user.addresses.length === 0) {        return NextResponse.json({           success: false,           error: 'No addresses found for this user'         }, { status: 404 });      }            // Check if the address exists      const addressIndex = user.addresses.findIndex((addr: any) => addr.addressId === addressId);            if (addressIndex === -1) {        return NextResponse.json({           success: false,           error: 'Address not found'         }, { status: 404 });      }            // Check if it's the default address      const isDefault = user.addresses[addressIndex].isDefault;            // Remove the address      user.addresses.splice(addressIndex, 1);            // If the deleted address was the default one and there are other addresses left,      // set the first remaining address as default      if (isDefault && user.addresses.length > 0) {        user.addresses[0].isDefault = true;      }            // Save the user      await user.save();            return NextResponse.json({        success: true,        message: 'Address deleted successfully'      });    } catch (err) {      console.error('Error processing user data:', err);      return NextResponse.json({         success: false,         error: 'Invalid user data in cookie'       }, { status: 400 });    }
   } catch (error) {
     console.error('Error deleting address:', error);
     return NextResponse.json({ 
@@ -331,9 +241,11 @@ export async function PUT(request: Request) {
   try {
     // Get session from cookies
     const cookie = request.headers.get('cookie') || '';
-    const isLoggedIn = cookie.includes('isLoggedIn=true');
     
-    if (!isLoggedIn) {
+    // Check for isLoggedIn cookie without assuming specific value
+    const isLoggedInCookie = cookie.match(/isLoggedIn=([^;]+)/);
+    
+    if (!isLoggedInCookie) {
       return NextResponse.json({ 
         success: false, 
         error: 'Unauthorized - Please log in' 

@@ -47,28 +47,15 @@ const nextConfig = {
               const sourceManifestPath = path.join(__dirname, '.next/server/app/page_client-reference-manifest.js');
               
               if (fs.existsSync(sourceManifestPath)) {
-                // Create necessary directories if they don't exist
-                const directories = [
-                  path.join(__dirname, '.next/server/app/(store)'),
-                  path.join(__dirname, '.next/server/app/(admin)'),
-                  path.join(__dirname, '.next/server/app/admin'),
-                ];
+                // Create (store) directory if it doesn't exist
+                const targetDir = path.join(__dirname, '.next/server/app/(store)');
+                if (!fs.existsSync(targetDir)) {
+                  fs.mkdirSync(targetDir, { recursive: true });
+                }
                 
-                directories.forEach(dir => {
-                  if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true });
-                  }
-                });
-                
-                // Copy the manifest file to all important directories
-                directories.forEach(dir => {
-                  const targetManifestPath = path.join(dir, 'page_client-reference-manifest.js');
-                  fs.copyFileSync(sourceManifestPath, targetManifestPath);
-                });
-                
-                console.log('Successfully copied client reference manifests to all directories');
-              } else {
-                console.warn('Source manifest file not found:', sourceManifestPath);
+                // Copy the manifest file to the (store) directory
+                const targetManifestPath = path.join(targetDir, 'page_client-reference-manifest.js');
+                fs.copyFileSync(sourceManifestPath, targetManifestPath);
               }
             } catch (error) {
               console.error('Error copying client reference manifest:', error);

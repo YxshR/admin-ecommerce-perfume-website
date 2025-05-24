@@ -16,8 +16,6 @@ export interface IProductBase {
   quantity: number;
   sold?: number;
   featured?: boolean;
-  best_seller?: boolean;
-  new_arrival?: boolean;
   // Rename isNew to avoid conflict with Document.isNew
   isNewProduct?: boolean;
   onSale?: boolean;
@@ -140,14 +138,6 @@ const ProductSchema = new Schema({
     type: Boolean,
     default: false
   },
-  best_seller: {
-    type: Boolean,
-    default: false
-  },
-  new_arrival: {
-    type: Boolean,
-    default: false
-  },
   // Renamed from isNew to isNewProduct
   isNewProduct: {
     type: Boolean,
@@ -188,8 +178,6 @@ ProductSchema.index({ name: 'text', description: 'text' });
 ProductSchema.index({ category: 1 });
 ProductSchema.index({ price: 1 });
 ProductSchema.index({ featured: 1 });
-ProductSchema.index({ best_seller: 1 });
-ProductSchema.index({ new_arrival: 1 });
 ProductSchema.index({ isNewProduct: 1 }); // Updated index name
 ProductSchema.index({ onSale: 1 });
 
