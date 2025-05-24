@@ -4,6 +4,7 @@ import connectMongoDB from '@/app/lib/mongodb';
 import User from '@/app/models/User';
 import Product from '@/app/models/Product';
 import Order from '@/app/models/Order';
+import Contact from '@/app/models/Contact';
 
 export async function GET(request: Request) {
   try {
@@ -36,10 +37,12 @@ export async function GET(request: Request) {
     
     // Get counts and data
     try {
-      const [totalUsers, totalProducts, totalOrders, recentOrders] = await Promise.all([
+      const [totalUsers, totalProducts, totalOrders, totalContacts, pendingContacts, recentOrders] = await Promise.all([
         User.countDocuments(),
         Product.countDocuments(),
         Order.countDocuments(),
+        Contact.countDocuments(),
+        Contact.countDocuments({ status: 'pending' }),
         Order.find()
           .sort({ createdAt: -1 })
           .limit(5)
@@ -51,6 +54,8 @@ export async function GET(request: Request) {
         totalUsers,
         totalProducts,
         totalOrders,
+        totalContacts,
+        pendingContacts,
         recentOrders
       });
     } catch (queryError) {
@@ -73,6 +78,8 @@ function getMockDashboardData() {
     totalUsers: 982,
     totalProducts: 45,
     totalOrders: 156,
+    totalContacts: 24,
+    pendingContacts: 8,
     recentOrders: [
       {
         _id: '1',
