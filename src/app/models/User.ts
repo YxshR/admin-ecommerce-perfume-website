@@ -24,6 +24,8 @@ export interface IUserBase {
     productId: mongoose.Types.ObjectId;
     addedAt: Date;
   }>;
+  lastLogin?: Date;
+  status?: 'active' | 'inactive' | 'suspended';
   createdAt: Date;
   updatedAt: Date;
   resetPasswordToken?: string;
@@ -136,6 +138,14 @@ const UserSchema = new Schema({
       default: Date.now
     }
   }],
+  lastLogin: {
+    type: Date
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'suspended'],
+    default: 'active'
+  },
   createdAt: {
     type: Date,
     default: Date.now

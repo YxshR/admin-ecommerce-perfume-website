@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import ShopNowButton from './ui/ShopNowButton';
 
@@ -27,6 +26,7 @@ export default function SaleCarousel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Fetch products with 50% off
   useEffect(() => {
@@ -60,11 +60,17 @@ export default function SaleCarousel() {
   }, []);
   
   const goToPrev = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
     setCurrentIndex((prev) => (prev === 0 ? products.length - 1 : prev - 1));
+    setTimeout(() => setIsTransitioning(false), 500);
   };
   
   const goToNext = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
     setCurrentIndex((prev) => (prev === products.length - 1 ? 0 : prev + 1));
+    setTimeout(() => setIsTransitioning(false), 500);
   };
   
   // Auto advance slides every 5 seconds
@@ -119,49 +125,44 @@ export default function SaleCarousel() {
   
   return (
     <div className="relative w-full h-[350px] sm:h-[400px] md:h-[500px] overflow-hidden bg-gray-50">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative w-full h-full"
-        >
-          {displayProducts[currentIndex] && (
-            <div className="grid grid-cols-1 md:grid-cols-2 h-full">
-              {/* Image */}
-              <div className="order-2 md:order-1 flex items-center justify-center h-full bg-gray-100">
-                <img
-                  src={displayProducts[currentIndex].images[0]?.url || '/perfume-placeholder.jpg'}
-                  alt={displayProducts[currentIndex].name}
-                  className="object-contain h-4/5 max-h-full"
-                />
-              </div>
-              
-              {/* Content */}
-              <div className="order-1 md:order-2 flex flex-col items-center justify-center p-4 md:p-8">
-                <div className="text-center space-y-2 md:space-y-4 max-w-sm mx-auto">
-                  <div className="bg-black text-white inline-block px-3 py-1 text-xs uppercase tracking-wider mb-2">
-                    On Sale
-                  </div>
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">{displayProducts[currentIndex].name}</h2>
-                  <p className="text-sm text-gray-600">{displayProducts[currentIndex].description}</p>
-                  
-                  <div className="flex items-center justify-center mt-2 md:mt-4 space-x-4">
-                    <span className="text-lg sm:text-xl font-bold">₹{displayProducts[currentIndex].discountedPrice.toFixed(0)}</span>
-                    <span className="text-sm text-gray-500 line-through">MRP ₹{displayProducts[currentIndex].price.toFixed(0)}</span>
-                  </div>
-                  
-                  <div className="mt-4 md:mt-6">
-                    <ShopNowButton href={`/product/${displayProducts[currentIndex]._id}`} />
-                  </div>
+      <div
+        className={`relative w-full h-full transition-opacity duration-500 ${
+          isTransitioning ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
+        {displayProducts[currentIndex] && (
+          <div className="grid grid-cols-1 md:grid-cols-2 h-full">
+            {/* Image */}
+            <div className="order-2 md:order-1 flex items-center justify-center h-full bg-gray-100">
+              <img
+                src={displayProducts[currentIndex].images[0]?.url || '/perfume-placeholder.jpg'}
+                alt={displayProducts[currentIndex].name}
+                className="object-contain h-4/5 max-h-full"
+              />
+            </div>
+            
+            {/* Content */}
+            <div className="order-1 md:order-2 flex flex-col items-center justify-center p-4 md:p-8">
+              <div className="text-center space-y-2 md:space-y-4 max-w-sm mx-auto">
+                <div className="bg-black text-white inline-block px-3 py-1 text-xs uppercase tracking-wider mb-2">
+                  On Sale
+                </div>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">{displayProducts[currentIndex].name}</h2>
+                <p className="text-sm text-gray-600">{displayProducts[currentIndex].description}</p>
+                
+                <div className="flex items-center justify-center mt-2 md:mt-4 space-x-4">
+                  <span className="text-lg sm:text-xl font-bold">₹{displayProducts[currentIndex].discountedPrice.toFixed(0)}</span>
+                  <span className="text-sm text-gray-500 line-through">MRP ₹{displayProducts[currentIndex].price.toFixed(0)}</span>
+                </div>
+                
+                <div className="mt-4 md:mt-6">
+                  <ShopNowButton href={`/product/${displayProducts[currentIndex]._id}`} />
                 </div>
               </div>
             </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
+          </div>
+        )}
+      </div>
       
       {/* Navigation arrows */}
       {displayProducts.length > 1 && (
