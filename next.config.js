@@ -24,6 +24,12 @@ const nextConfig = {
     MONGODB_URI: 'mongodb+srv://Yash:f500A06khWmFn4Qd@yash.pweao0h.mongodb.net/?retryWrites=true&w=majority&appName=Yash',
   },
   output: 'standalone',
+  // Add experimental features to improve compatibility with Vercel deployments
+  experimental: {
+    optimizePackageImports: ['react-icons'],
+    optimizeCss: true,
+  },
+  serverExternalPackages: [],
 };
 
 module.exports = nextConfig; 
