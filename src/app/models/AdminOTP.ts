@@ -15,13 +15,11 @@ const AdminOTPSchema = new Schema<IAdminOTP>({
   email: { 
     type: String, 
     lowercase: true,
-    trim: true,
-    sparse: true // Allow null/undefined while maintaining uniqueness
+    trim: true
   },
   phone: {
     type: String,
-    trim: true,
-    sparse: true // Allow null/undefined while maintaining uniqueness
+    trim: true
   },
   otp: { 
     type: String, 
@@ -48,8 +46,8 @@ const AdminOTPSchema = new Schema<IAdminOTP>({
 });
 
 // Create indexes
-AdminOTPSchema.index({ email: 1 });
-AdminOTPSchema.index({ phone: 1 });
+AdminOTPSchema.index({ email: 1 }, { sparse: true });
+AdminOTPSchema.index({ phone: 1 }, { sparse: true });
 AdminOTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for automatic document cleanup
 
 // Define a method to check if OTP is valid

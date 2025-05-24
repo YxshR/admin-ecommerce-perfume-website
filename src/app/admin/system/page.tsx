@@ -76,8 +76,8 @@ export default function SystemSettingsPage() {
   
   useEffect(() => {
     // Check if user is logged in and has admin role
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    const token = localStorage.getItem('admin_token');
+    const user = localStorage.getItem('admin_user');
     
     if (!token || !user) {
       router.push('/admin/login');
@@ -263,8 +263,8 @@ export default function SystemSettingsPage() {
   };
   
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
     router.push('/admin/login');
   };
   

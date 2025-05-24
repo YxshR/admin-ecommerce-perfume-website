@@ -55,7 +55,7 @@ export async function GET(
   try {
     // Get order ID from params
     const { id } = params;
-    
+
     // Verify admin token
     const token = request.headers.get('Authorization')?.split(' ')[1];
     
@@ -185,6 +185,6 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+} 
 
 export const dynamic = 'force-dynamic'; 

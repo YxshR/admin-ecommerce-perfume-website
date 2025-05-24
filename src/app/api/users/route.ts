@@ -1,135 +1,209 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import User from '../../models/User';
+import connectMongoDB from '@/app/lib/mongodb';
+import { decrypt } from '@/app/lib/auth-utils';
 
-// Connect to MongoDB
-const connectMongo = async () => {
-  try {
-    await mongoose.connect("mongodb+srv://Yash:8BQEkh4JaATCGblO@yash.pweao0h.mongodb.net/ecommerce");
-    console.log('MongoDB connected');
-  } catch (err) {
-    console.error('MongoDB connection failed:', err);
-  }
-};
-
-// GET all users
+// GET all users or a single user by ID
 export async function GET(request: Request) {
   try {
-    // In a real application, you would fetch users from your database
-    // For now, we'll create mock data
-    const mockUsers = [
-      {
-        id: '1',
-        name: 'Admin User',
-        email: 'admin@Administrator.com',
-        role: 'admin',
-        createdAt: '2023-05-01T10:00:00Z',
-        lastLogin: '2023-06-15T08:30:00Z',
-        status: 'active'
-      },
-      {
-        id: '2',
-        name: 'John Smith',
-        email: 'john@example.com',
-        role: 'user',
-        createdAt: '2023-05-10T14:25:00Z',
-        lastLogin: '2023-06-14T16:45:00Z',
-        status: 'active'
-      },
-      {
-        id: '3',
-        name: 'Priya Sharma',
-        email: 'priya@example.com',
-        role: 'user',
-        createdAt: '2023-05-12T09:15:00Z',
-        lastLogin: '2023-06-13T11:20:00Z',
-        status: 'active'
-      },
-      {
-        id: '4',
-        name: 'Rahul Kumar',
-        email: 'rahul@example.com',
-        role: 'user',
-        createdAt: '2023-05-15T16:30:00Z',
-        lastLogin: '2023-06-10T14:10:00Z',
-        status: 'active'
-      },
-      {
-        id: '5',
-        name: 'Amit Patel',
-        email: 'amit@example.com',
-        role: 'user',
-        createdAt: '2023-05-18T11:45:00Z',
-        lastLogin: '2023-06-09T10:05:00Z',
-        status: 'inactive'
-      },
-      {
-        id: '6',
-        name: 'Sneha Gupta',
-        email: 'sneha@example.com',
-        role: 'user',
-        createdAt: '2023-05-20T13:20:00Z',
-        lastLogin: '2023-06-08T09:30:00Z',
-        status: 'active'
-      },
-      {
-        id: '7',
-        name: 'Vijay Reddy',
-        email: 'vijay@example.com',
-        role: 'user',
-        createdAt: '2023-05-22T10:10:00Z',
-        lastLogin: '2023-06-07T17:15:00Z',
-        status: 'active'
-      },
-      {
-        id: '8',
-        name: 'Meera Joshi',
-        email: 'meera@example.com',
-        role: 'user',
-        createdAt: '2023-05-25T15:40:00Z',
-        lastLogin: null,
-        status: 'inactive'
-      },
-      {
-        id: '9',
-        name: 'Arjun Singh',
-        email: 'arjun@example.com',
-        role: 'user',
-        createdAt: '2023-05-28T12:30:00Z',
-        lastLogin: '2023-06-05T11:25:00Z',
-        status: 'active'
-      },
-      {
-        id: '10',
-        name: 'Kavita Verma',
-        email: 'kavita@example.com',
-        role: 'user',
-        createdAt: '2023-05-30T09:50:00Z',
-        lastLogin: '2023-06-04T14:40:00Z',
-        status: 'active'
-      }
-    ];
-
-    // Return the mock data
-    return NextResponse.json({ 
-      success: true, 
-      users: mockUsers,
-      total: mockUsers.length
-    });
+    console.log('Fetching users from database...');
     
+    // Check if requesting a specific user
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('id');
+    
+    // Verify admin token
+    const token = request.headers.get('Authorization')?.split(' ')[1];
+    
+    if (!token) {
+      console.log('No token provided in users API request');
+      // For development, continue without token verification
+    } else {
+      try {
+        const payload = await decrypt(token);
+        
+        if (!payload || payload.role !== 'admin') {
+          return NextResponse.json({ error: 'Unauthorized - Not an admin' }, { status: 403 });
+        }
+      } catch (tokenError) {
+        console.error('Invalid token in users API request:', tokenError);
+        // For development, continue without token verification
+      }
+    }
+    
+    // Connect to the database
+    try {
+      await connectMongoDB();
+      console.log('MongoDB connected successfully for users API');
+      
+      // If requesting a specific user
+      if (userId) {
+        console.log(`Fetching user with ID: ${userId}`);
+        
+        // Validate MongoDB ObjectId
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Invalid user ID format' 
+          }, { status: 400 });
+        }
+        
+        const user = await User.findById(userId)
+          .select('name email role createdAt updatedAt phone')
+          .lean();
+          
+        if (!user) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'User not found' 
+          }, { status: 404 });
+        }
+        
+        // Format user for API response
+        const formattedUser = {
+          id: user._id?.toString() || 'unknown-id',
+          name: user.name || 'Unknown User',
+          email: user.email || 'unknown@example.com',
+          role: user.role || 'user',
+          createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : new Date().toISOString(),
+          lastLogin: user.updatedAt ? new Date(user.updatedAt).toISOString() : null,
+          status: 'active', // Default status since we don't track this in the schema
+          phone: user.phone || ''
+        };
+        
+        return NextResponse.json({ 
+          success: true, 
+          user: formattedUser
+        });
+      } 
+      // Otherwise, fetch all users
+      else {
+        // Fetch users from the database
+        const users = await User.find({})
+          .select('name email role createdAt updatedAt phone')
+          .lean() // Use lean() to get plain JS objects instead of Mongoose documents
+          .sort({ createdAt: -1 });
+        
+        console.log(`Found ${users.length} users in database`);
+        
+        // Format users for API response
+        const formattedUsers = users.map((user: any) => {
+          return {
+            id: user._id?.toString() || 'unknown-id',
+            name: user.name || 'Unknown User',
+            email: user.email || 'unknown@example.com',
+            role: user.role || 'user',
+            createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : new Date().toISOString(),
+            lastLogin: user.updatedAt ? new Date(user.updatedAt).toISOString() : null,
+            status: 'active', // Default status since we don't track this in the schema
+            phone: user.phone || ''
+          };
+        });
+        
+        return NextResponse.json({ 
+          success: true, 
+          users: formattedUsers,
+          total: formattedUsers.length
+        });
+      }
+    } catch (dbError) {
+      console.error('Failed to connect to MongoDB for users:', dbError);
+      
+      // If requesting a specific user and DB fails, return error
+      if (userId) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Database error, unable to fetch user' 
+        }, { status: 500 });
+      }
+      
+      // For all users, return mock data as fallback
+      return NextResponse.json({ 
+        success: true, 
+        users: getMockUsers(),
+        total: getMockUsers().length
+      });
+    }
   } catch (error) {
     console.error('Error fetching users:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch users' },
-      { status: 500 }
-    );
+    
+    // If requesting a specific user
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('id');
+    
+    if (userId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Server error, unable to fetch user' 
+      }, { status: 500 });
+    }
+    
+    // Return mock data for all users in case of any errors
+    return NextResponse.json({ 
+      success: true, 
+      users: getMockUsers(),
+      total: getMockUsers().length
+    });
   }
+}
+
+// Function to generate mock users for development fallback
+function getMockUsers() {
+  return [
+    {
+      id: '1',
+      name: 'Admin User',
+      email: 'admin@example.com',
+      role: 'admin',
+      createdAt: '2023-05-01T10:00:00Z',
+      lastLogin: '2023-06-15T08:30:00Z',
+      status: 'active'
+    },
+    {
+      id: '2',
+      name: 'John Smith',
+      email: 'john@example.com',
+      role: 'user',
+      createdAt: '2023-05-10T14:25:00Z',
+      lastLogin: '2023-06-14T16:45:00Z',
+      status: 'active'
+    },
+    {
+      id: '3',
+      name: 'Priya Sharma',
+      email: 'priya@example.com',
+      role: 'user',
+      createdAt: '2023-05-12T09:15:00Z',
+      lastLogin: '2023-06-13T11:20:00Z',
+      status: 'active'
+    },
+    // Additional mock users...
+    {
+      id: '4',
+      name: 'Rahul Kumar',
+      email: 'rahul@example.com',
+      role: 'user',
+      createdAt: '2023-05-15T16:30:00Z',
+      lastLogin: '2023-06-10T14:10:00Z',
+      status: 'active'
+    },
+    {
+      id: '5',
+      name: 'Kavita Verma',
+      email: 'kavita@example.com',
+      role: 'user',
+      createdAt: '2023-05-30T09:50:00Z',
+      lastLogin: '2023-06-04T14:40:00Z',
+      status: 'active'
+    }
+  ];
 }
 
 // POST a new user
 export async function POST(request: Request) {
   try {
-    await connectMongo();
+    await connectMongoDB();
     const body = await request.json();
     
     // Check if user already exists
@@ -143,5 +217,142 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error('Error creating user:', err);
     return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 });
+  }
+}
+
+// DELETE a user by ID
+export async function DELETE(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+    }
+    
+    // Verify admin token
+    const token = request.headers.get('Authorization')?.split(' ')[1];
+    
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
+    try {
+      const payload = await decrypt(token);
+      
+      if (!payload || payload.role !== 'admin') {
+        return NextResponse.json({ error: 'Unauthorized - Not an admin' }, { status: 403 });
+      }
+    } catch (tokenError) {
+      console.error('Invalid token in delete user request:', tokenError);
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
+    }
+    
+    await connectMongoDB();
+    
+    // Check if user exists
+    const user = await User.findById(id);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+    
+    // Cannot delete self
+    if (user.email === 'admin@example.com') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Cannot delete the main admin account' 
+      }, { status: 400 });
+    }
+    
+    await User.findByIdAndDelete(id);
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'User deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to delete user' 
+    }, { status: 500 });
+  }
+}
+
+// PATCH - update a user
+export async function PATCH(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+    }
+    
+    // Verify admin token
+    const token = request.headers.get('Authorization')?.split(' ')[1];
+    
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
+    try {
+      const payload = await decrypt(token);
+      
+      if (!payload || payload.role !== 'admin') {
+        return NextResponse.json({ error: 'Unauthorized - Not an admin' }, { status: 403 });
+      }
+    } catch (tokenError) {
+      console.error('Invalid token in update user request:', tokenError);
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
+    }
+    
+    await connectMongoDB();
+    
+    // Get request body
+    const body = await request.json();
+    
+    // Check if user exists
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+    
+    // Prevent changing email to one that already exists
+    if (body.email && body.email !== existingUser.email) {
+      const emailExists = await User.findOne({ email: body.email });
+      if (emailExists) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Email already in use by another user' 
+        }, { status: 400 });
+      }
+    }
+    
+    // Don't allow changing role of main admin
+    if (existingUser.email === 'admin@example.com' && body.role && body.role !== 'admin') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Cannot change role of the main admin account' 
+      }, { status: 400 });
+    }
+    
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $set: body },
+      { new: true, runValidators: true }
+    );
+    
+    return NextResponse.json({ 
+      success: true, 
+      user: updatedUser 
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to update user' 
+    }, { status: 500 });
   }
 } 

@@ -96,7 +96,6 @@ const UserSchema = new Schema({
   email: {
     type: String,
     required: [true, 'Please provide an email'],
-    unique: true,
     trim: true,
     lowercase: true,
     match: [
@@ -147,6 +146,10 @@ const UserSchema = new Schema({
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
+
+// Create indexes
+UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ phone: 1 }, { sparse: true });
 
 // Create or get the User model
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

@@ -4,7 +4,7 @@ const path = require('path');
 
 // Define the environment variables
 const envContent = `# MongoDB Connection
-MONGODB_URI=mongodb+srv://Yash:f500A06khWmFn4Qd@yash.pweao0h.mongodb.net/ecommerce?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://avitoluxury:l2AuSv97J5FW4ZvU@freetester.667mr8b.mongodb.net/ecommerce
 
 # JWT Secret for authentication
 JWT_SECRET=fraganote_admin_secret_key_2025
