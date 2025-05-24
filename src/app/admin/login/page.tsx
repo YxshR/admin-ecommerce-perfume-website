@@ -127,12 +127,7 @@ export default function AdminLoginPage() {
       
       const data = await res.json();
       
-      if (data.success && data.token) {
-        // Save token to localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('token_timestamp', Date.now().toString());
-        
+      if (data.success) {
         // Redirect to admin dashboard
         router.push('/admin/dashboard');
       } else {
@@ -141,6 +136,36 @@ export default function AdminLoginPage() {
     } catch (bypassError: any) {
       console.error('Bypass login error:', bypassError);
       setError(bypassError.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Add a function to set up admin user
+  const setupAdminUser = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const response = await fetch('/api/auth/admin-setup?key=setup-admin-securely');
+      
+      if (!response.ok) {
+        throw new Error('Failed to set up admin user. Please try again later.');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setEmail(data.credentials.email);
+        setPassword(data.credentials.password);
+        setUsingBypass(true);
+        setError(`Admin user ${data.message.includes('created') ? 'created' : 'found'}. You can now log in with the displayed credentials.`);
+      } else {
+        throw new Error(data.error || 'Failed to set up admin user');
+      }
+    } catch (error: any) {
+      console.error('Admin setup error:', error);
+      setError(error.message || 'Failed to set up admin user');
     } finally {
       setLoading(false);
     }
@@ -163,13 +188,22 @@ export default function AdminLoginPage() {
               <p className="text-gray-600">
                 Access restricted to authorized personnel only
               </p>
-              <button 
-                onClick={toggleBypassMode}
-                className="mt-2 inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
-              >
-                <FiKey className="mr-1" />
-                {usingBypass ? "Use Regular Login" : "Use Direct Access"}
-              </button>
+              <div className="mt-2 space-x-2">
+                <button 
+                  onClick={toggleBypassMode}
+                  className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
+                >
+                  <FiKey className="mr-1" />
+                  {usingBypass ? "Use Regular Login" : "Use Direct Access"}
+                </button>
+                <button 
+                  onClick={setupAdminUser}
+                  className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200"
+                >
+                  <FiShield className="mr-1" />
+                  Setup Admin User
+                </button>
+              </div>
             </div>
             
             {usingBypass && (

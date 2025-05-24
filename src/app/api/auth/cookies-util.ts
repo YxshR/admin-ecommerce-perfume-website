@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
 import { TOKEN_EXPIRY } from '../../lib/auth-utils';
 
+// Helper function to securely log only in development
+const isProduction = process.env.NODE_ENV === 'production';
+const secureLog = (message: string) => {
+  if (!isProduction) {
+    console.log(`[DEV API] ${message}`);
+  }
+};
+
 // Set authentication cookies in the response for API routes
 export function setApiCookies(response: NextResponse, user: any, token: string) {
-  console.log('Setting authentication cookies');
+  secureLog('Setting authentication cookies');
   
   try {
     // Set HTTP-only cookie for the token
@@ -14,27 +22,39 @@ export function setApiCookies(response: NextResponse, user: any, token: string) 
       maxAge: TOKEN_EXPIRY / 1000, // Convert to seconds
       path: '/'
     });
-    console.log('Set token cookie (httpOnly)');
+    secureLog('Set token cookie (httpOnly)');
     
     // Set non-HTTP-only cookie for login status check with a timestamp to ensure freshness
-    response.cookies.set('isLoggedIn', `true.${Date.now()}`, {
+    // Use a hash of timestamp rather than showing true/false
+    const timestamp = Date.now();
+    const authHash = btoa(`${timestamp}`);
+    
+    response.cookies.set('isLoggedIn', authHash, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: TOKEN_EXPIRY / 1000,
       path: '/'
     });
-    console.log('Set isLoggedIn cookie');
+    secureLog('Set isLoggedIn cookie');
     
     // Set non-HTTP-only cookie for user data (non-sensitive)
+    // Create a safe version of the user object, hiding sensitive data
+    const safeUserId = typeof user._id === 'object' && user._id !== null 
+      ? user._id.toString() 
+      : user.userId || user._id;
+      
+    // Create a minimal safe user object with only necessary information
     const userData = {
-      userId: typeof user._id === 'object' && user._id !== null 
-        ? user._id.toString() 
-        : user.userId || user._id,
+      userId: safeUserId,
       name: user.name,
-      email: user.email,
       role: user.role
     };
+    
+    // Only include email in development mode
+    if (!isProduction) {
+      Object.assign(userData, { email: user.email });
+    }
     
     response.cookies.set('userData', JSON.stringify(userData), {
       httpOnly: false,
@@ -43,9 +63,13 @@ export function setApiCookies(response: NextResponse, user: any, token: string) 
       maxAge: TOKEN_EXPIRY / 1000,
       path: '/'
     });
-    console.log('Set userData cookie with data for:', userData.email);
+    secureLog('Set userData cookie');
+    
   } catch (error) {
-    console.error('Error setting cookies:', error);
+    secureLog('Error setting cookies');
+    if (!isProduction) {
+      console.error('Error setting cookies details:', error);
+    }
   }
   
   return response;
@@ -53,7 +77,7 @@ export function setApiCookies(response: NextResponse, user: any, token: string) 
 
 // Clear authentication cookies in the response
 export function clearApiCookies(response: NextResponse) {
-  console.log('Clearing authentication cookies');
+  secureLog('Clearing authentication cookies');
   
   try {
     // For all cookies, set with these options to ensure proper deletion
@@ -74,9 +98,12 @@ export function clearApiCookies(response: NextResponse) {
     response.headers.append('Set-Cookie', 'isLoggedIn=; Path=/; Max-Age=0; SameSite=Lax');
     response.headers.append('Set-Cookie', 'userData=; Path=/; Max-Age=0; SameSite=Lax');
     
-    console.log('All cookies cleared successfully');
+    secureLog('All cookies cleared successfully');
   } catch (error) {
-    console.error('Error clearing cookies:', error);
+    secureLog('Error clearing cookies');
+    if (!isProduction) {
+      console.error('Error clearing cookies details:', error);
+    }
   }
   
   return response;

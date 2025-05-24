@@ -21,6 +21,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Helper to check if we're in production mode
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Secure logging function that only logs in development mode
+const secureLog = (message: string, data?: any) => {
+  if (!isProduction) {
+    if (data) {
+      console.log(`[DEV] ${message}`, data);
+    } else {
+      console.log(`[DEV] ${message}`);
+    }
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,9 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .find(row => row.startsWith('isLoggedIn='))
         ?.split('=')[1];
       
-      console.log('Checking auth status, isLoggedIn cookie:', loginStatus);
-      
-      if (loginStatus === 'true') {
+      if (loginStatus) {
         // Get user data from cookie
         const userDataCookie = document.cookie
           .split('; ')
@@ -49,22 +61,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (userDataCookie) {
           try {
             const userData = JSON.parse(decodeURIComponent(userDataCookie));
-            console.log('User data found in cookie:', userData?.email);
+            secureLog('Auth check: User authenticated');
             setUser(userData);
           } catch (parseError) {
-            console.error('Failed to parse user data cookie:', parseError);
+            secureLog('Auth error: Failed to parse user data');
             setUser(null);
           }
         } else {
-          console.log('No user data cookie found');
+          secureLog('Auth check: No user data found');
           setUser(null);
         }
       } else {
-        console.log('Not logged in');
+        secureLog('Auth check: Not logged in');
         setUser(null);
       }
     } catch (error) {
-      console.error('Error checking authentication:', error);
+      secureLog('Auth error: Error checking authentication');
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -82,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   // Re-check auth status when route changes
   useEffect(() => {
-    console.log('Route changed, re-checking auth status');
+    secureLog('Route changed, re-checking auth status');
     checkAuth();
   }, [pathname]);
   
@@ -90,15 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string, redirectPath?: string) => {
     try {
       setIsLoading(true);
-      console.log('Login attempt for:', email);
+      secureLog('Login attempt initiated');
       
       // Use window.location to get the exact current URL base
       // This ensures we're using whatever port the page is currently on
       const baseUrl = window.location.origin;
       const timestamp = Date.now();
       const apiUrl = `${baseUrl}/api/auth/login?_=${timestamp}`;
-      
-      console.log('Sending login request to:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -112,14 +122,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (!response.ok) {
-        console.error('Login API error:', response.status, response.statusText);
+        secureLog('Login API error');
         let errorMessage = 'Login failed';
         
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          console.error('Failed to parse error response:', e);
+          secureLog('Failed to parse error response');
         }
         
         return { success: false, error: errorMessage };
@@ -128,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       
       if (data.success) {
-        console.log('Login successful');
+        secureLog('Login successful');
         
         // Immediately update the user state after successful login
         setUser(data.user);
@@ -146,21 +156,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // First check for explicitly provided redirect path
         if (redirectPath) {
-          console.log('Redirecting to explicit path:', redirectPath);
+          secureLog('Redirecting user after login');
           router.push(redirectPath);
         } else {
           // Check URL parameter
           const urlRedirect = searchParams.get('redirect');
           if (urlRedirect) {
-            console.log('Redirecting to URL param path:', urlRedirect);
+            secureLog('Redirecting user after login');
             router.push(urlRedirect);
           } else {
             // Default redirect based on role
             if (data.user.role === 'admin') {
-              console.log('Redirecting admin to dashboard');
+              secureLog('Redirecting admin after login');
               router.push('/admin/dashboard');
             } else {
-              console.log('Redirecting user to account');
+              secureLog('Redirecting user after login');
               router.push('/account');
             }
           }
@@ -168,11 +178,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         return { success: true };
       } else {
-        console.error('Login failed:', data.error);
+        secureLog('Login failed');
         return { success: false, error: data.error || 'Login failed' };
       }
     } catch (error) {
-      console.error('Login error:', error);
+      secureLog('Login error occurred');
       return { success: false, error: 'An unexpected error occurred' };
     } finally {
       setIsLoading(false);
@@ -183,14 +193,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       setIsLoading(true);
-      console.log('Logging out...');
+      secureLog('Logout initiated');
       
       // Use window.location to get the current URL base
       const baseUrl = window.location.origin;
       const timestamp = Date.now();
       const apiUrl = `${baseUrl}/api/auth/logout?_=${timestamp}`;
-      
-      console.log('Sending logout request to:', apiUrl);
       
       await fetch(apiUrl, {
         method: 'POST',
@@ -206,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       document.cookie = 'userData=; Path=/; Max-Age=0; SameSite=Lax';
       
       setUser(null);
-      console.log('Logout successful');
+      secureLog('Logout successful');
       
       // Trigger a storage event to ensure all tabs are updated
       window.localStorage.setItem('auth_timestamp', Date.now().toString());
@@ -214,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/');
       router.refresh();
     } catch (error) {
-      console.error('Logout error:', error);
+      secureLog('Logout error occurred');
     } finally {
       setIsLoading(false);
     }
