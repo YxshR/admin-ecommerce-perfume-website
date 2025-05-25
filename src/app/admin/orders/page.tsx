@@ -19,6 +19,8 @@ import {
   FiLogOut,
   FiGrid
 } from 'react-icons/fi';
+import AdminLayout from '@/app/components/AdminLayout';
+import { useAdminAuth, getAdminToken } from '@/app/lib/admin-auth';
 
 interface OrderItem {
   id: string;
@@ -45,6 +47,7 @@ interface Order {
 
 export default function AdminOrdersPage() {
   const router = useRouter();
+  const { loading: authLoading, isAuthenticated } = useAdminAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,16 +58,9 @@ export default function AdminOrdersPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      let token;
-      try {
-        token = localStorage.getItem('token');
-        if (!token) {
-          router.push('/admin/login');
-          return;
-        }
-      } catch (storageError) {
-        console.error('Error accessing localStorage:', storageError);
-        useMockOrdersData();
+      const token = getAdminToken();
+      if (!token) {
+        setError('Authentication required');
         return;
       }
 
@@ -223,15 +219,9 @@ export default function AdminOrdersPage() {
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingOrderId(orderId);
     try {
-      let token;
-      try {
-        token = localStorage.getItem('token');
-      } catch (storageError) {
-        console.error('Error accessing localStorage:', storageError);
-        // Update local state since we can't access localStorage
-        setOrders(orders.map(order => 
-          order.id === orderId ? { ...order, status: newStatus } : order
-        ));
+      const token = getAdminToken();
+      if (!token) {
+        setError('Authentication required');
         return;
       }
 
@@ -269,13 +259,10 @@ export default function AdminOrdersPage() {
 
   // Load orders on component mount
   useEffect(() => {
-    try {
+    if (!authLoading && isAuthenticated) {
       fetchOrders();
-    } catch (err) {
-      console.error('Error in orders useEffect:', err);
-      useMockOrdersData();
     }
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   // Filter orders by status
   const filteredOrders = statusFilter === 'All' 
@@ -327,7 +314,7 @@ export default function AdminOrdersPage() {
     router.push('/admin/login');
   };
 
-  if (loading && orders.length === 0) {
+  if (authLoading || (loading && orders.length === 0)) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -336,267 +323,253 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
-        <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-800">
-          <h2 className="text-xl font-bold text-white">Fraganote Admin</h2>
+    <AdminLayout activeRoute="/admin/orders">
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Orders Management</h1>
+          <p className="text-gray-600">View and manage customer orders</p>
         </div>
-        <nav className="mt-6">
-          <Link href="/admin/dashboard" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiBox className="mr-3" /> Dashboard
-            </div>
-          </Link>
-          <Link href="/admin/products" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiShoppingBag className="mr-3" /> Products
-            </div>
-          </Link>
-          <Link href="/admin/layout" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiGrid className="mr-3" /> Layout
-            </div>
-          </Link>
-          <Link href="/admin/orders" className="block py-3 px-4 text-gray-900 font-medium bg-gray-100 hover:bg-gray-200 border-l-4 border-blue-600">
-            <div className="flex items-center">
-              <FiShoppingBag className="mr-3" /> Orders
-            </div>
-          </Link>
-          <Link href="/admin/users" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiUsers className="mr-3" /> Users
-            </div>
-          </Link>
-          <Link href="/admin/settings" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiSettings className="mr-3" /> Settings
-            </div>
-          </Link>
-          <Link href="/admin/system" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiSettings className="mr-3" /> System
-            </div>
-          </Link>
-          <button 
-            onClick={handleLogout}
-            className="w-full text-left py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900"
-          >
-            <div className="flex items-center">
-              <FiLogOut className="mr-3" /> Logout
-            </div>
-          </button>
-        </nav>
+        <button 
+          onClick={fetchOrders} 
+          className="flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+        >
+          <FiRefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </button>
       </div>
-
-      {/* Main Content */}
-      <div className="flex-1 p-8">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Orders Management</h1>
-            <p className="text-gray-600">View and manage customer orders</p>
+      
+      {/* Filter bar */}
+      <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+        <div className="flex items-center space-x-4">
+          <div className="font-medium text-gray-700 flex items-center">
+            <FiFilter className="mr-2" /> Filter by status:
           </div>
-          <button 
-            onClick={fetchOrders}
-            disabled={loading}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
-          >
-            <FiRefreshCw className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setStatusFilter('All')}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                statusFilter === 'All'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setStatusFilter('Pending')}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                statusFilter === 'Pending'
+                  ? 'bg-yellow-500 text-white'
+                  : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+              }`}
+            >
+              Pending
+            </button>
+            <button
+              onClick={() => setStatusFilter('Processing')}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                statusFilter === 'Processing'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+              }`}
+            >
+              Processing
+            </button>
+            <button
+              onClick={() => setStatusFilter('Shipped')}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                statusFilter === 'Shipped'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+              }`}
+            >
+              Shipped
+            </button>
+            <button
+              onClick={() => setStatusFilter('Delivered')}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                statusFilter === 'Delivered'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-green-100 text-green-800 hover:bg-green-200'
+              }`}
+            >
+              Delivered
+            </button>
+            <button
+              onClick={() => setStatusFilter('Cancelled')}
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                statusFilter === 'Cancelled'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-red-100 text-red-800 hover:bg-red-200'
+              }`}
+            >
+              Cancelled
+            </button>
+          </div>
         </div>
-
-        {error && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r">
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
-
-        {/* Status filter */}
-        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-          <div className="flex items-center">
-            <FiFilter className="mr-2 text-gray-500" />
-            <span className="mr-3 font-medium">Filter by status:</span>
-            <div className="flex space-x-2">
-              {['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map(status => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    statusFilter === status
-                      ? 'bg-blue-100 text-blue-800 font-medium'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Orders table */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      </div>
+      
+      {/* Orders list */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Order ID
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Customer
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {loading ? (
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <td colSpan={6} className="px-6 py-4 text-center">
+                  <div className="flex justify-center">
+                    <FiRefreshCw className="animate-spin h-5 w-5 text-blue-500" />
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">
-                    <div className="flex justify-center">
-                      <FiRefreshCw className="animate-spin h-5 w-5 text-blue-500" />
+            ) : filteredOrders.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  No orders found
+                </td>
+              </tr>
+            ) : (
+              filteredOrders.map((order) => (
+                <tr key={order.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <FiPackage className="mr-2 text-gray-400" />
+                      <span className="font-medium text-gray-900">#{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{order.customer.name}</div>
+                    <div className="text-sm text-gray-500">{order.customer.email}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDate(order.date)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(order.status)}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ₹{order.total.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      {/* Status update dropdown */}
+                      <div className="relative inline-block text-left">
+                        <select
+                          disabled={updatingOrderId === order.id}
+                          value={order.status}
+                          onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                          className="block w-full pl-3 pr-10 py-1 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Processing">Processing</option>
+                          <option value="Shipped">Shipped</option>
+                          <option value="Delivered">Delivered</option>
+                          <option value="Cancelled">Cancelled</option>
+                        </select>
+                        {updatingOrderId === order.id && (
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                            <FiRefreshCw className="animate-spin h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* View order details */}
+                      <Link 
+                        href={`/admin/orders/${order.id}`}
+                        className="text-blue-600 hover:text-blue-900 inline-flex items-center"
+                      >
+                        View
+                        <FiChevronRight className="ml-1" />
+                      </Link>
                     </div>
                   </td>
                 </tr>
-              ) : filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    No orders found
-                  </td>
-                </tr>
-              ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <FiPackage className="mr-2 text-gray-400" />
-                        <span className="font-medium text-gray-900">#{order.orderNumber || order.id.slice(0, 8).toUpperCase()}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{order.customer.name}</div>
-                      <div className="text-sm text-gray-500">{order.customer.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(order.date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(order.status)}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ₹{order.total.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {/* Status update dropdown */}
-                        <div className="relative inline-block text-left">
-                          <select
-                            disabled={updatingOrderId === order.id}
-                            value={order.status}
-                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                            className="block w-full pl-3 pr-10 py-1 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Processing">Processing</option>
-                            <option value="Shipped">Shipped</option>
-                            <option value="Delivered">Delivered</option>
-                            <option value="Cancelled">Cancelled</option>
-                          </select>
-                          {updatingOrderId === order.id && (
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                              <FiRefreshCw className="animate-spin h-4 w-4 text-gray-400" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* View order details */}
-                        <Link 
-                          href={`/admin/orders/${order.id}`}
-                          className="text-blue-600 hover:text-blue-900 inline-flex items-center"
-                        >
-                          View
-                          <FiChevronRight className="ml-1" />
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-        {/* Quick status actions */}
-        <div className="mt-6 bg-white shadow rounded-lg p-4">
-          <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <button 
-              onClick={() => {
-                const selectedOrders = filteredOrders.filter(o => o.status === 'Pending');
-                if (selectedOrders.length > 0 && confirm(`Mark ${selectedOrders.length} pending orders as Processing?`)) {
-                  selectedOrders.forEach(o => updateOrderStatus(o.id, 'Processing'));
-                }
-              }}
-              className="flex items-center justify-center p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-            >
-              <FiCheck className="mr-2" />
-              Process Pending Orders
-            </button>
-            
-            <button 
-              onClick={() => {
-                const selectedOrders = filteredOrders.filter(o => o.status === 'Processing');
-                if (selectedOrders.length > 0 && confirm(`Mark ${selectedOrders.length} processing orders as Shipped?`)) {
-                  selectedOrders.forEach(o => updateOrderStatus(o.id, 'Shipped'));
-                }
-              }}
-              className="flex items-center justify-center p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100"
-            >
-              <FiTruck className="mr-2" />
-              Ship Processed Orders
-            </button>
-            
-            <button 
-              onClick={() => {
-                const selectedOrders = filteredOrders.filter(o => o.status === 'Shipped');
-                if (selectedOrders.length > 0 && confirm(`Mark ${selectedOrders.length} shipped orders as Delivered?`)) {
-                  selectedOrders.forEach(o => updateOrderStatus(o.id, 'Delivered'));
-                }
-              }}
-              className="flex items-center justify-center p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100"
-            >
-              <FiArchive className="mr-2" />
-              Mark Orders as Delivered
-            </button>
-            
-            <button 
-              onClick={() => {
-                const selectedOrders = filteredOrders.filter(o => !['Delivered', 'Cancelled'].includes(o.status));
-                if (selectedOrders.length > 0 && confirm(`Are you sure you want to cancel ${selectedOrders.length} orders?`)) {
-                  selectedOrders.forEach(o => updateOrderStatus(o.id, 'Cancelled'));
-                }
-              }}
-              className="flex items-center justify-center p-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100"
-            >
-              <FiX className="mr-2" />
-              Cancel Selected Orders
-            </button>
-          </div>
+      {/* Quick status actions */}
+      <div className="mt-6 bg-white shadow rounded-lg p-4">
+        <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <button 
+            onClick={() => {
+              const selectedOrders = filteredOrders.filter(o => o.status === 'Pending');
+              if (selectedOrders.length > 0 && confirm(`Mark ${selectedOrders.length} pending orders as Processing?`)) {
+                selectedOrders.forEach(o => updateOrderStatus(o.id, 'Processing'));
+              }
+            }}
+            className="flex items-center justify-center p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
+          >
+            <FiCheck className="mr-2" />
+            Process Pending Orders
+          </button>
+          
+          <button 
+            onClick={() => {
+              const selectedOrders = filteredOrders.filter(o => o.status === 'Processing');
+              if (selectedOrders.length > 0 && confirm(`Mark ${selectedOrders.length} processing orders as Shipped?`)) {
+                selectedOrders.forEach(o => updateOrderStatus(o.id, 'Shipped'));
+              }
+            }}
+            className="flex items-center justify-center p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100"
+          >
+            <FiTruck className="mr-2" />
+            Ship Processed Orders
+          </button>
+          
+          <button 
+            onClick={() => {
+              const selectedOrders = filteredOrders.filter(o => o.status === 'Shipped');
+              if (selectedOrders.length > 0 && confirm(`Mark ${selectedOrders.length} shipped orders as Delivered?`)) {
+                selectedOrders.forEach(o => updateOrderStatus(o.id, 'Delivered'));
+              }
+            }}
+            className="flex items-center justify-center p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100"
+          >
+            <FiArchive className="mr-2" />
+            Mark Orders as Delivered
+          </button>
+          
+          <button 
+            onClick={() => {
+              const selectedOrders = filteredOrders.filter(o => !['Delivered', 'Cancelled'].includes(o.status));
+              if (selectedOrders.length > 0 && confirm(`Are you sure you want to cancel ${selectedOrders.length} orders?`)) {
+                selectedOrders.forEach(o => updateOrderStatus(o.id, 'Cancelled'));
+              }
+            }}
+            className="flex items-center justify-center p-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100"
+          >
+            <FiX className="mr-2" />
+            Cancel Selected Orders
+          </button>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

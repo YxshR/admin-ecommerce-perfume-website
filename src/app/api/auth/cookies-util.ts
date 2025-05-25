@@ -24,6 +24,18 @@ export function setApiCookies(response: NextResponse, user: any, token: string) 
     });
     secureLog('Set token cookie (httpOnly)');
     
+    // If the user is an admin, also set admin_token cookie
+    if (user.role === 'admin') {
+      response.cookies.set('admin_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: TOKEN_EXPIRY / 1000, // Convert to seconds
+        path: '/'
+      });
+      secureLog('Set admin_token cookie (httpOnly)');
+    }
+    
     // Set non-HTTP-only cookie for login status check with a timestamp to ensure freshness
     // Use a hash of timestamp rather than showing true/false
     const timestamp = Date.now();

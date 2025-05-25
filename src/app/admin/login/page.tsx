@@ -205,16 +205,17 @@ export default function AdminLoginPage() {
       const data = await res.json();
       
       if (data.success && data.token) {
-        // Save token to localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('token_timestamp', Date.now().toString());
+        // Import and use the new admin auth utility
+        const { saveAdminAuth } = await import('@/app/lib/admin-auth');
+        
+        // Save admin auth data
+        saveAdminAuth(data.token, data.user);
         
         // Redirect to admin dashboard
         router.push('/admin/dashboard');
       } else {
         setError(data.error || 'Invalid OTP. Please try again.');
-          }
+      }
     } catch (err: any) {
       console.error('OTP verification error:', err);
       setError(err.message || 'Failed to verify OTP. Please try again.');
@@ -250,26 +251,27 @@ export default function AdminLoginPage() {
       });
       
       if (!res.ok) {
-        throw new Error('Invalid access credentials.');
+        throw new Error('Admin bypass login failed');
       }
       
-        const data = await res.json();
+      const data = await res.json();
+      
+      if (data.success && data.token) {
+        // Import and use the new admin auth utility
+        const { saveAdminAuth } = await import('@/app/lib/admin-auth');
         
-        if (data.success && data.token) {
-          // Save token to localStorage
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          localStorage.setItem('token_timestamp', Date.now().toString());
-          
-          // Redirect to admin dashboard
-          router.push('/admin/dashboard');
-        } else {
-        setError('Authentication failed. Please try again.');
-        }
-    } catch (bypassError: any) {
-      console.error('Bypass login error:', bypassError);
-      setError(bypassError.message || 'Authentication failed.');
+        // Save admin auth data
+        saveAdminAuth(data.token, data.user);
+        
+        // Redirect to admin dashboard
+        router.push('/admin/dashboard');
+      } else {
+        setError(data.error || 'Admin bypass login failed. Please try again.');
       }
+    } catch (err: any) {
+      console.error('Admin bypass login error:', err);
+      setError(err.message || 'Admin bypass login failed. Please try again.');
+    }
   };
   
   // Render content based on current step

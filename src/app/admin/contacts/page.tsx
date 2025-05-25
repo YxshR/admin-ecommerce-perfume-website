@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { requireAuth } from '@/app/lib/auth';
 import { FiMail, FiUser, FiPhone, FiCalendar, FiCheck, FiX, FiEye } from 'react-icons/fi';
+import AdminLayout from '@/app/components/AdminLayout';
+import { useAdminAuth, getAdminToken } from '@/app/lib/admin-auth';
 
 interface ContactSubmission {
   _id: string;
@@ -18,6 +19,7 @@ interface ContactSubmission {
 
 export default function AdminContactsPage() {
   const router = useRouter();
+  const { loading: authLoading } = useAdminAuth();
   
   // State variables
   const [contacts, setContacts] = useState<ContactSubmission[]>([]);
@@ -29,24 +31,35 @@ export default function AdminContactsPage() {
   const [selectedContact, setSelectedContact] = useState<ContactSubmission | null>(null);
   const [showModal, setShowModal] = useState(false);
   
-  // Check authentication on page load
+  // Fetch contacts when component mounts
   useEffect(() => {
-    if (!requireAuth(router)) return;
-    
-    fetchContacts();
-  }, [router, currentPage, statusFilter]);
+    if (!authLoading) {
+      fetchContacts();
+    }
+  }, [currentPage, statusFilter, authLoading]);
   
   // Fetch contact submissions from the API
   const fetchContacts = async () => {
     setLoading(true);
     try {
+      // Get admin token
+      const token = getAdminToken();
+      if (!token) {
+        setError('Authentication failed. Please log in again.');
+        return;
+      }
+      
       // Build query string
       let queryString = `?page=${currentPage}&limit=10`;
       if (statusFilter) {
         queryString += `&status=${statusFilter}`;
       }
       
-      const response = await fetch(`/api/contact${queryString}`);
+      const response = await fetch(`/api/contact${queryString}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch contact submissions');
@@ -68,10 +81,18 @@ export default function AdminContactsPage() {
   // Update contact status
   const updateContactStatus = async (id: string, status: 'pending' | 'read' | 'responded') => {
     try {
+      // Get admin token
+      const token = getAdminToken();
+      if (!token) {
+        setError('Authentication failed. Please log in again.');
+        return;
+      }
+      
       const response = await fetch(`/api/contact/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ status }),
       });
@@ -141,8 +162,16 @@ export default function AdminContactsPage() {
     setSelectedContact(null);
   };
   
+  if (authLoading || loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="p-6">
+    <AdminLayout activeRoute="/admin/contacts">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Contact Submissions</h1>
         
@@ -167,12 +196,7 @@ export default function AdminContactsPage() {
         </div>
       </div>
       
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
-          <p className="mt-2">Loading...</p>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="bg-red-50 text-red-700 p-4 rounded-md">
           {error}
         </div>
@@ -182,26 +206,24 @@ export default function AdminContactsPage() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto bg-white rounded-lg shadow">
+          {/* Contact List */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Subject
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -211,50 +233,42 @@ export default function AdminContactsPage() {
                   <tr key={contact._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
-                          <FiUser className="text-gray-500" />
+                        <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+                          <FiUser className="h-5 w-5 text-gray-500" />
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{contact.name}</div>
+                          <div className="text-sm text-gray-500">{contact.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{contact.email}</div>
-                      {contact.phone && (
-                        <div className="text-sm text-gray-500">{contact.phone}</div>
-                      )}
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 truncate max-w-xs">{contact.subject}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 truncate max-w-[200px]">{contact.subject}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(contact.createdAt)}
+                      <div className="text-sm text-gray-500 flex items-center">
+                        <FiCalendar className="mr-1" /> {formatDate(contact.createdAt)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(contact.status)}`}>
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(contact.status)}`}>
                         {contact.status.charAt(0).toUpperCase() + contact.status.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => viewContact(contact)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="View details"
-                        >
-                          <FiEye size={18} />
-                        </button>
-                        {contact.status !== 'responded' && (
-                          <button
-                            onClick={() => updateContactStatus(contact._id, 'responded')}
-                            className="text-green-600 hover:text-green-900"
-                            title="Mark as responded"
-                          >
-                            <FiCheck size={18} />
-                          </button>
-                        )}
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => viewContact(contact)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-3"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => updateContactStatus(contact._id, 'responded')}
+                        className={`text-green-600 hover:text-green-900 ${contact.status === 'responded' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={contact.status === 'responded'}
+                      >
+                        Mark Responded
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -263,143 +277,149 @@ export default function AdminContactsPage() {
           </div>
           
           {/* Pagination */}
-          <div className="flex justify-between items-center mt-6">
-            <p className="text-sm text-gray-500">
-              Showing page {currentPage} of {totalPages}
-            </p>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className={`px-4 py-2 border rounded-md ${
-                  currentPage === 1
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-black hover:bg-gray-50'
-                }`}
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className={`px-4 py-2 border rounded-md ${
-                  currentPage === totalPages
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-black hover:bg-gray-50'
-                }`}
-              >
-                Next
-              </button>
+          {totalPages > 1 && (
+            <div className="mt-4 flex justify-center">
+              <nav className="inline-flex rounded-md shadow">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === 1 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Previous
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                      currentPage === page
+                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === totalPages 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Next
+                </button>
+              </nav>
             </div>
-          </div>
+          )}
         </>
       )}
       
       {/* Contact Detail Modal */}
       {showModal && selectedContact && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="fixed inset-0 bg-black opacity-50"></div>
+        <div className="fixed inset-0 overflow-y-auto z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black opacity-50"></div>
+          <div className="relative bg-white rounded-lg max-w-3xl w-full max-h-screen overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Contact Details</h3>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-500">
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
             
-            <div className="relative bg-white rounded-lg max-w-2xl w-full mx-auto p-6 shadow-xl">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-bold">{selectedContact.subject}</h3>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-400 hover:text-black"
-                >
-                  <FiX size={24} />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center text-gray-700">
-                  <FiUser className="mr-2" />
-                  <span className="font-medium mr-2">Name:</span>
-                  <span>{selectedContact.name}</span>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <div className="flex items-center p-3 bg-gray-50 rounded-md">
+                    <FiUser className="text-gray-400 mr-2" />
+                    <span>{selectedContact.name}</span>
+                  </div>
                 </div>
                 
-                <div className="flex items-center text-gray-700">
-                  <FiMail className="mr-2" />
-                  <span className="font-medium mr-2">Email:</span>
-                  <a href={`mailto:${selectedContact.email}`} className="text-blue-600 hover:underline">
-                    {selectedContact.email}
-                  </a>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <div className="flex items-center p-3 bg-gray-50 rounded-md">
+                    <FiMail className="text-gray-400 mr-2" />
+                    <span>{selectedContact.email}</span>
+                  </div>
                 </div>
                 
                 {selectedContact.phone && (
-                  <div className="flex items-center text-gray-700">
-                    <FiPhone className="mr-2" />
-                    <span className="font-medium mr-2">Phone:</span>
-                    <a href={`tel:${selectedContact.phone}`} className="text-blue-600 hover:underline">
-                      {selectedContact.phone}
-                    </a>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <div className="flex items-center p-3 bg-gray-50 rounded-md">
+                      <FiPhone className="text-gray-400 mr-2" />
+                      <span>{selectedContact.phone}</span>
+                    </div>
                   </div>
                 )}
                 
-                <div className="flex items-center text-gray-700">
-                  <FiCalendar className="mr-2" />
-                  <span className="font-medium mr-2">Date:</span>
-                  <span>{formatDate(selectedContact.createdAt)}</span>
-                </div>
-                
-                <div className="mt-4">
-                  <h4 className="font-medium mb-2">Message:</h4>
-                  <div className="bg-gray-50 p-4 rounded-md whitespace-pre-wrap">
-                    {selectedContact.message}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <div className="flex items-center p-3 bg-gray-50 rounded-md">
+                    <FiCalendar className="text-gray-400 mr-2" />
+                    <span>{formatDate(selectedContact.createdAt)}</span>
                   </div>
                 </div>
-                
-                <div className="flex justify-between items-center mt-6 pt-4 border-t">
-                  <div className="flex items-center">
-                    <span className="font-medium mr-2">Status:</span>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(selectedContact.status)}`}>
-                      {selectedContact.status.charAt(0).toUpperCase() + selectedContact.status.slice(1)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => updateContactStatus(selectedContact._id, 'read')}
-                      disabled={selectedContact.status === 'read'}
-                      className={`px-3 py-1 text-sm font-medium rounded-md ${
-                        selectedContact.status === 'read'
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                      }`}
-                    >
-                      Mark as Read
-                    </button>
-                    
-                    <button
-                      onClick={() => updateContactStatus(selectedContact._id, 'responded')}
-                      disabled={selectedContact.status === 'responded'}
-                      className={`px-3 py-1 text-sm font-medium rounded-md ${
-                        selectedContact.status === 'responded'
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-green-50 text-green-700 hover:bg-green-100'
-                      }`}
-                    >
-                      Mark as Responded
-                    </button>
-                  </div>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <div className="p-3 bg-gray-50 rounded-md">
+                  {selectedContact.subject}
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                <div className="p-3 bg-gray-50 rounded-md whitespace-pre-wrap">
+                  {selectedContact.message}
+                </div>
+              </div>
+              
+              <div className="flex justify-between">
+                <div className="flex items-center">
+                  <span className="mr-2">Status:</span>
+                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(selectedContact.status)}`}>
+                    {selectedContact.status.charAt(0).toUpperCase() + selectedContact.status.slice(1)}
+                  </span>
                 </div>
                 
-                <div className="mt-4 pt-4 border-t">
-                  <a
-                    href={`mailto:${selectedContact.email}?subject=RE: ${selectedContact.subject}`}
-                    className="inline-flex items-center justify-center px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
-                    onClick={() => updateContactStatus(selectedContact._id, 'responded')}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => updateContactStatus(selectedContact._id, 'read')}
+                    className={`inline-flex items-center px-3 py-1.5 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 ${
+                      selectedContact.status === 'read' ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={selectedContact.status === 'read'}
                   >
-                    <FiMail className="mr-2" />
-                    Reply via Email
-                  </a>
+                    <FiCheck className="mr-1" /> Mark as Read
+                  </button>
+                  
+                  <button
+                    onClick={() => updateContactStatus(selectedContact._id, 'responded')}
+                    className={`inline-flex items-center px-3 py-1.5 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 ${
+                      selectedContact.status === 'responded' ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    disabled={selectedContact.status === 'responded'}
+                  >
+                    <FiCheck className="mr-1" /> Mark as Responded
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 } 

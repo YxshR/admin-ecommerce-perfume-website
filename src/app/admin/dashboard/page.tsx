@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings, FiRefreshCw, FiMail } from 'react-icons/fi';
+import { useAdminAuth, adminLogout, getAdminToken } from '@/app/lib/admin-auth';
 
 // Define types
 interface RecentOrder {
@@ -31,8 +32,7 @@ interface DashboardData {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userName, setUserName] = useState('');
+  const { isAuthenticated, user, loading: authLoading } = useAdminAuth();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     totalOrders: 0,
@@ -45,74 +45,29 @@ export default function AdminDashboard() {
   const [dataError, setDataError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   
-  // Authentication check
+  // Fetch dashboard data on authentication success
   useEffect(() => {
-    try {
-    // Check if user is logged in and has admin role
-      let token, user;
-      
-      try {
-        token = localStorage.getItem('token');
-        user = localStorage.getItem('user');
-    
-        if (!token || !user) {
-          router.push('/admin/login');
-          return;
-        }
-      } catch (storageError) {
-        console.error('Error accessing localStorage:', storageError);
-        // Use default admin values
-        setIsAdmin(true);
-        setUserName('Admin');
-        setLoading(false);
-        fetchDashboardData();
-        return;
-      }
-    
-      try {
-        const userData = JSON.parse(user);
-        if (userData.role !== 'admin') {
-          router.push('/admin/login');
-          return;
-        }
-        
-        setIsAdmin(true);
-        setUserName(userData.name || 'Admin');
-        setLoading(false);
-          
-        // Fetch dashboard data
-        fetchDashboardData();
-      } catch (parseError) {
-        console.error('Error parsing user data:', parseError);
-        router.push('/admin/login');
-      }
-    } catch (error) {
-      console.error('Error in dashboard useEffect:', error);
-      // Use default admin values as fallback
-      setIsAdmin(true);
-      setUserName('Admin');
-      setLoading(false);
+    if (!authLoading && isAuthenticated) {
       fetchDashboardData();
     }
-  }, [router]);
+  }, [authLoading, isAuthenticated]);
   
   // Fetch dashboard data from API
   const fetchDashboardData = async () => {
     setRefreshing(true);
     try {
       // Fetch dashboard summary data
-      let token;
-      try {
-        token = localStorage.getItem('token');
-      } catch (storageError) {
-        console.error('Error accessing localStorage:', storageError);
+      const token = getAdminToken();
+      
+      if (!token) {
+        console.error('No admin token available');
         useMockDashboardData();
         return;
       }
       
       const response = await fetch('/api/admin/dashboard', {
         headers: {
-          'Authorization': `Bearer ${token || ''}`
+          'Authorization': `Bearer ${token}`
         },
         cache: 'no-store'
       });
@@ -214,26 +169,22 @@ export default function AdminDashboard() {
   };
   
   const handleLogout = () => {
-    try {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    } catch (error) {
-      console.error('Error clearing localStorage:', error);
-    }
-    router.push('/admin/login');
+    adminLogout(router);
   };
   
   const handleRefresh = () => {
     fetchDashboardData();
   };
   
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
+  
+  // If not authenticated after loading completes, the useAdminAuth hook will redirect automatically
   
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -293,7 +244,7 @@ export default function AdminDashboard() {
       <div className="flex-1 p-8">
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Welcome, {userName}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Welcome, {user?.name || 'Admin'}</h1>
             <p className="text-gray-600">Here's an overview of your store</p>
           </div>
           <button 

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings, FiSave, FiEye } from 'react-icons/fi';
+import { FiSave } from 'react-icons/fi';
+import AdminLayout from '@/app/components/AdminLayout';
+import { useAdminAuth } from '@/app/lib/admin-auth';
 
 // Define types for our theme configs
 interface ThemeColors {
@@ -32,8 +33,7 @@ interface ButtonStyles {
 
 export default function SystemSettingsPage() {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userName, setUserName] = useState('');
+  const { loading: authLoading } = useAdminAuth();
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -75,35 +75,10 @@ export default function SystemSettingsPage() {
   const productCardStyles = ['minimal', 'bordered', 'shadowed', 'elegant'];
   
   useEffect(() => {
-    // Check if user is logged in and has admin role
-    const token = localStorage.getItem('admin_token');
-    const user = localStorage.getItem('admin_user');
-    
-    if (!token || !user) {
-      router.push('/admin/login');
-      return;
-    }
-    
-    try {
-      const userData = JSON.parse(user);
-      if (userData.role !== 'admin') {
-        router.push('/admin/login');
-        return;
-      }
-      
-      setIsAdmin(true);
-      setUserName(userData.name || 'Admin');
-      
-      // Load saved theme settings
-      loadSettings();
-      
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      router.push('/admin/login');
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
+    // Load saved theme settings
+    loadSettings();
+    setLoading(false);
+  }, []);
   
   // Load settings from localStorage (in a real app, this would be from your API)
   const loadSettings = () => {
@@ -198,7 +173,6 @@ export default function SystemSettingsPage() {
       document.documentElement.style.setProperty('--color-accent', colors.accent);
       document.documentElement.style.setProperty('--color-background', colors.background);
       document.documentElement.style.setProperty('--color-text', colors.text);
-      document.documentElement.style.setProperty('--color-button-text', colors.buttonText);
       
       // Show success message
       setSaveSuccess(true);
@@ -209,21 +183,14 @@ export default function SystemSettingsPage() {
         setSaveSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error('Error saving settings:', error);
-      setSaveError('Failed to save settings. Please try again.');
-      setSaveSuccess(false);
+      console.error('Error saving theme settings:', error);
+      setSaveError('Failed to save theme settings. Please try again.');
     }
   };
   
-  // Reset settings to default
+  // Reset settings to defaults
   const resetSettings = () => {
-    if (confirm('Are you sure you want to reset all theme settings to default?')) {
-      localStorage.removeItem('theme_colors');
-      localStorage.removeItem('theme_fonts');
-      localStorage.removeItem('theme_button_styles');
-      localStorage.removeItem('theme_other_settings');
-      
-      // Reset state to defaults
+    if (confirm('Are you sure you want to reset all theme settings to defaults?')) {
       setColors({
         primary: '#3b82f6', // blue-500
         secondary: '#1f2937', // gray-800
@@ -232,7 +199,7 @@ export default function SystemSettingsPage() {
         text: '#111827', // gray-900
         buttonText: '#ffffff', // white
         navBackground: '#ffffff', // white
-        footerBackground: '#f3f4f6', // gray-100
+        footerBackground: '#f3f4f6', // gray-100,
       });
       
       setFonts({
@@ -255,6 +222,12 @@ export default function SystemSettingsPage() {
         productCardsStyle: 'minimal',
       });
       
+      // Remove from localStorage
+      localStorage.removeItem('theme_colors');
+      localStorage.removeItem('theme_fonts');
+      localStorage.removeItem('theme_button_styles');
+      localStorage.removeItem('theme_other_settings');
+      
       setSaveSuccess(true);
       setTimeout(() => {
         setSaveSuccess(false);
@@ -262,13 +235,7 @@ export default function SystemSettingsPage() {
     }
   };
   
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
-    router.push('/admin/login');
-  };
-  
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -277,578 +244,238 @@ export default function SystemSettingsPage() {
   }
   
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
-        <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-800">
-          <h2 className="text-xl font-bold text-white">Fraganote Admin</h2>
-        </div>
-        <nav className="mt-6">
-          <Link href="/admin/dashboard" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiBox className="mr-3" /> Dashboard
-            </div>
-          </Link>
-          <Link href="/admin/products" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiShoppingBag className="mr-3" /> Products
-            </div>
-          </Link>
-          <Link href="/admin/orders" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiShoppingBag className="mr-3" /> Orders
-            </div>
-          </Link>
-          <Link href="/admin/users" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiUsers className="mr-3" /> Users
-            </div>
-          </Link>
-          <Link href="/admin/settings" className="block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900">
-            <div className="flex items-center">
-              <FiSettings className="mr-3" /> Settings
-            </div>
-          </Link>
-          <Link href="/admin/system" className="block py-3 px-4 text-gray-900 font-medium bg-gray-100 hover:bg-gray-200 border-l-4 border-blue-600">
-            <div className="flex items-center">
-              <FiSettings className="mr-3" /> System
-            </div>
-          </Link>
-          <button 
-            onClick={handleLogout}
-            className="w-full text-left py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900"
-          >
-            <div className="flex items-center">
-              <FiLogOut className="mr-3" /> Logout
-            </div>
-          </button>
-        </nav>
+    <AdminLayout activeRoute="/admin/system">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
+        <p className="text-gray-600">Customize your store's theme and appearance</p>
       </div>
       
-      {/* Main Content */}
-      <div className="flex-1 p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-          <p className="text-gray-600">Customize the appearance of your store</p>
+      {/* Success/Error Messages */}
+      {saveSuccess && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+          Theme settings saved successfully!
         </div>
-        
-        {/* Success/Error Messages */}
-        {saveSuccess && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-            Settings saved successfully! Changes will take effect immediately.
-          </div>
-        )}
-        
-        {saveError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {saveError}
-          </div>
-        )}
-        
-        {/* Theme Configuration */}
-        <div className="grid grid-cols-1 gap-8">
-          {/* Preview */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-6">Theme Preview</h2>
-            
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="p-6" style={{ backgroundColor: colors.background, color: colors.text }}>
-                <div style={{ fontFamily: fonts.heading }}>
-                  <h3 className="text-2xl font-bold mb-4" style={{ color: colors.secondary }}>
-                    Preview Your Theme
-                  </h3>
-                  
-                  <p className="mb-4" style={{ fontFamily: fonts.body }}>
-                    This is how your theme will look like on your website. The color scheme, typography, 
-                    and button styles shown here will be applied across your store.
-                  </p>
-                  
-                  <div className="mb-4 flex space-x-4">
-                    <button 
-                      style={{
-                        backgroundColor: colors.primary, 
-                        color: colors.buttonText,
-                        borderRadius: buttonStyles.roundedFull ? '9999px' : 
-                                     buttonStyles.roundedMd ? '0.375rem' : '0',
-                        boxShadow: buttonStyles.shadow ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none',
-                        textTransform: buttonStyles.uppercase ? 'uppercase' : 'none',
-                        padding: '0.5rem 1rem'
-                      }}
-                    >
-                      Primary Button
-                    </button>
-                    
-                    <button
-                      style={{
-                        backgroundColor: colors.secondary,
-                        color: colors.buttonText,
-                        borderRadius: buttonStyles.roundedFull ? '9999px' : 
-                                     buttonStyles.roundedMd ? '0.375rem' : '0',
-                        boxShadow: buttonStyles.shadow ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none',
-                        textTransform: buttonStyles.uppercase ? 'uppercase' : 'none',
-                        padding: '0.5rem 1rem'
-                      }}
-                    >
-                      Secondary Button
-                    </button>
-                    
-                    <button
-                      style={{
-                        backgroundColor: colors.accent,
-                        color: colors.buttonText,
-                        borderRadius: buttonStyles.roundedFull ? '9999px' : 
-                                     buttonStyles.roundedMd ? '0.375rem' : '0',
-                        boxShadow: buttonStyles.shadow ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none',
-                        textTransform: buttonStyles.uppercase ? 'uppercase' : 'none',
-                        padding: '0.5rem 1rem'
-                      }}
-                    >
-                      Accent Button
-                    </button>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold text-lg mb-2" style={{ color: colors.secondary, fontFamily: fonts.heading }}>
-                      Product Example
-                    </h4>
-                    <div className="flex">
-                      <div className="w-20 h-20 bg-gray-200 rounded-md mr-4"></div>
-                      <div>
-                        <h5 className="font-medium" style={{ fontFamily: fonts.heading }}>Product Name</h5>
-                        <p className="text-sm" style={{ fontFamily: fonts.body }}>Product description goes here</p>
-                        <p className="font-bold mt-1" style={{ color: colors.accent }}>₹1,499.00</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Color Settings */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Color Settings</h2>
-            <p className="text-gray-500 mb-6">Set the color scheme for your store</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Primary Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="primary"
-                    value={colors.primary}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.primary}
-                    onChange={handleColorChange}
-                    name="primary"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Secondary Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="secondary"
-                    value={colors.secondary}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.secondary}
-                    onChange={handleColorChange}
-                    name="secondary"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Accent Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="accent"
-                    value={colors.accent}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.accent}
-                    onChange={handleColorChange}
-                    name="accent"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Background Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="background"
-                    value={colors.background}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.background}
-                    onChange={handleColorChange}
-                    name="background"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Text Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="text"
-                    value={colors.text}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.text}
-                    onChange={handleColorChange}
-                    name="text"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Button Text Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="buttonText"
-                    value={colors.buttonText}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.buttonText}
-                    onChange={handleColorChange}
-                    name="buttonText"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nav Background Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="navBackground"
-                    value={colors.navBackground}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.navBackground}
-                    onChange={handleColorChange}
-                    name="navBackground"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Footer Background Color
-                </label>
-                <div className="flex">
-                  <input
-                    type="color"
-                    name="footerBackground"
-                    value={colors.footerBackground}
-                    onChange={handleColorChange}
-                    className="h-10 w-10 rounded border border-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={colors.footerBackground}
-                    onChange={handleColorChange}
-                    name="footerBackground"
-                    className="ml-2 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Typography Settings */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Typography</h2>
-            <p className="text-gray-500 mb-6">Configure the fonts used across your store</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Heading Font
-                </label>
-                <select
-                  name="heading"
-                  value={fonts.heading}
-                  onChange={handleFontChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {fontOptions.map(font => (
-                    <option key={font} value={font} style={{ fontFamily: font }}>
-                      {font}
-                    </option>
-                  ))}
-                </select>
-                <div className="mt-2 text-lg font-medium" style={{ fontFamily: fonts.heading }}>
-                  The quick brown fox jumps over the lazy dog
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Body Font
-                </label>
-                <select
-                  name="body"
-                  value={fonts.body}
-                  onChange={handleFontChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {fontOptions.map(font => (
-                    <option key={font} value={font} style={{ fontFamily: font }}>
-                      {font}
-                    </option>
-                  ))}
-                </select>
-                <div className="mt-2" style={{ fontFamily: fonts.body }}>
-                  The quick brown fox jumps over the lazy dog. This text shows how body text will appear throughout your website.
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Button Styles */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Button Styles</h2>
-            <p className="text-gray-500 mb-6">Configure the appearance of buttons</p>
-            
-            <div className="space-y-4">
-              <div>
-                <p className="block text-sm font-medium text-gray-700 mb-2">Button Shape</p>
-                <div className="flex space-x-4">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      checked={buttonStyles.roundedNone}
-                      onChange={() => handleButtonStyleChange('roundedNone')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Square</span>
-                  </label>
-                  
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      checked={buttonStyles.roundedMd}
-                      onChange={() => handleButtonStyleChange('roundedMd')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Rounded</span>
-                  </label>
-                  
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      checked={buttonStyles.roundedFull}
-                      onChange={() => handleButtonStyleChange('roundedFull')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Pill</span>
-                  </label>
-                </div>
-              </div>
-              
-              <div>
-                <p className="block text-sm font-medium text-gray-700 mb-2">Button Options</p>
-                <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={buttonStyles.shadow}
-                      onChange={() => handleButtonStyleChange('shadow')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Add Shadow</span>
-                  </label>
-                  
-                  <label className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={buttonStyles.uppercase}
-                      onChange={() => handleButtonStyleChange('uppercase')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Uppercase Text</span>
-                  </label>
-                </div>
-              </div>
-              
-              <div className="pt-4">
-                <p className="block text-sm font-medium text-gray-700 mb-2">Button Preview</p>
-                <div className="flex space-x-4">
-                  <button 
-                    className="px-4 py-2"
-                    style={{
-                      backgroundColor: colors.primary,
-                      color: colors.buttonText,
-                      borderRadius: buttonStyles.roundedFull ? '9999px' : 
-                                 buttonStyles.roundedMd ? '0.375rem' : '0',
-                      boxShadow: buttonStyles.shadow ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none',
-                      textTransform: buttonStyles.uppercase ? 'uppercase' : 'none'
-                    }}
-                  >
-                    Primary Button
-                  </button>
-                  
-                  <button 
-                    className="px-4 py-2"
-                    style={{
-                      backgroundColor: colors.secondary,
-                      color: colors.buttonText,
-                      borderRadius: buttonStyles.roundedFull ? '9999px' : 
-                                 buttonStyles.roundedMd ? '0.375rem' : '0',
-                      boxShadow: buttonStyles.shadow ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none',
-                      textTransform: buttonStyles.uppercase ? 'uppercase' : 'none'
-                    }}
-                  >
-                    Secondary Button
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Other Settings */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Additional Settings</h2>
-            <p className="text-gray-500 mb-6">Configure other visual aspects of your store</p>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    name="showAnnouncementBar"
-                    checked={otherSettings.showAnnouncementBar}
-                    onChange={handleOtherSettingChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Show announcement bar</span>
-                </label>
-              </div>
-              
-              <div>
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    name="enableDarkMode"
-                    checked={otherSettings.enableDarkMode}
-                    onChange={handleOtherSettingChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Enable dark mode option</span>
-                </label>
-              </div>
-              
-              <div>
-                <label className="inline-flex items-center">
-                  <input
-                    type="checkbox"
-                    name="useAnimations"
-                    checked={otherSettings.useAnimations}
-                    onChange={handleOtherSettingChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Use animations and transitions</span>
-                </label>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Card Style
-                </label>
-                <select
-                  name="productCardsStyle"
-                  value={otherSettings.productCardsStyle}
-                  onChange={handleOtherSettingChange}
-                  className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="minimal">Minimal</option>
-                  <option value="bordered">Bordered</option>
-                  <option value="shadowed">Shadowed</option>
-                  <option value="elegant">Elegant</option>
-                </select>
-              </div>
-            </div>
-          </div>
+      )}
+      
+      {saveError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {saveError}
         </div>
-        
-        {/* Form Actions */}
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={resetSettings}
-            className="mr-3 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Reset to Defaults
-          </button>
-          
-          <button
-            onClick={saveSettings}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
-          >
-            <FiSave className="mr-2" /> Save Settings
-          </button>
-        </div>
-        
-        {/* Preview Link */}
-        <div className="mt-6 text-center">
-          <Link href="/" target="_blank" className="inline-flex items-center text-blue-600 hover:text-blue-800">
-            <FiEye className="mr-1" /> Preview changes on your store
-          </Link>
+      )}
+      
+      {/* Color Settings */}
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-lg font-medium mb-4">Color Scheme</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Object.entries(colors).map(([key, value]) => (
+            <div key={key}>
+              <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                {key.replace(/([A-Z])/g, ' $1').trim()}
+              </label>
+              <div className="flex">
+                <input
+                  type="color"
+                  id={key}
+                  name={key}
+                  value={value}
+                  onChange={handleColorChange}
+                  className="h-10 w-10 border border-gray-300 rounded mr-2"
+                />
+                <input
+                  type="text"
+                  value={value}
+                  onChange={handleColorChange}
+                  name={key}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+      
+      {/* Font Settings */}
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-lg font-medium mb-4">Typography</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Object.entries(fonts).map(([key, value]) => (
+            <div key={key}>
+              <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                {key} Font
+              </label>
+              <select
+                id={key}
+                name={key}
+                value={value}
+                onChange={handleFontChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {fontOptions.map(font => (
+                  <option key={font} value={font}>{font}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Button Styles */}
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-lg font-medium mb-4">Button Styles</h2>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Corner Radius</p>
+            <div className="flex space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  checked={buttonStyles.roundedNone}
+                  onChange={() => handleButtonStyleChange('roundedNone')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="ml-2 text-sm text-gray-700">Square</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  checked={buttonStyles.roundedMd}
+                  onChange={() => handleButtonStyleChange('roundedMd')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="ml-2 text-sm text-gray-700">Rounded</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  checked={buttonStyles.roundedFull}
+                  onChange={() => handleButtonStyleChange('roundedFull')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="ml-2 text-sm text-gray-700">Pill</span>
+              </label>
+            </div>
+          </div>
+          
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Options</p>
+            <div className="flex space-x-4">
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  checked={buttonStyles.shadow}
+                  onChange={() => handleButtonStyleChange('shadow')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">Drop Shadow</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  checked={buttonStyles.uppercase}
+                  onChange={() => handleButtonStyleChange('uppercase')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">Uppercase Text</span>
+              </label>
+            </div>
+          </div>
+          
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Preview</p>
+            <button
+              className={`px-4 py-2 bg-${colors.primary} text-${colors.buttonText} 
+                ${buttonStyles.roundedFull ? 'rounded-full' : ''} 
+                ${buttonStyles.roundedMd ? 'rounded-md' : ''}
+                ${buttonStyles.roundedNone ? 'rounded-none' : ''}
+                ${buttonStyles.shadow ? 'shadow-md' : ''}
+                ${buttonStyles.uppercase ? 'uppercase' : ''}
+              `}
+              style={{ backgroundColor: colors.primary, color: colors.buttonText }}
+            >
+              Button Preview
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Other Settings */}
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-lg font-medium mb-4">Additional Settings</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                name="showAnnouncementBar"
+                checked={otherSettings.showAnnouncementBar}
+                onChange={handleOtherSettingChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm text-gray-700">Show Announcement Bar</span>
+            </label>
+          </div>
+          
+          <div>
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                name="enableDarkMode"
+                checked={otherSettings.enableDarkMode}
+                onChange={handleOtherSettingChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm text-gray-700">Enable Dark Mode Option</span>
+            </label>
+          </div>
+          
+          <div>
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                name="useAnimations"
+                checked={otherSettings.useAnimations}
+                onChange={handleOtherSettingChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm text-gray-700">Use Animations</span>
+            </label>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Product Card Style
+            </label>
+            <select
+              name="productCardsStyle"
+              value={otherSettings.productCardsStyle}
+              onChange={handleOtherSettingChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {productCardStyles.map(style => (
+                <option key={style} value={style}>{style.charAt(0).toUpperCase() + style.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      {/* Action Buttons */}
+      <div className="flex justify-between">
+        <button
+          onClick={resetSettings}
+          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Reset to Defaults
+        </button>
+        
+        <button
+          onClick={saveSettings}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <FiSave className="mr-2 -ml-1 h-5 w-5" />
+          Save Settings
+        </button>
+      </div>
+    </AdminLayout>
   );
 } 

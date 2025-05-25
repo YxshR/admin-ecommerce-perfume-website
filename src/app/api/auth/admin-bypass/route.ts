@@ -68,6 +68,15 @@ export async function POST(request: NextRequest) {
       
       setApiCookies(response, mockUser, token);
       
+      // Also set an explicit admin_token cookie with the same value
+      response.cookies.set('admin_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60, // 24 hours in seconds
+        path: '/'
+      });
+      
       console.log('Admin bypass login successful, returning response');
       return response;
     }
