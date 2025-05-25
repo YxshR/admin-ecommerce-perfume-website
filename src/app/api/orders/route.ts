@@ -4,74 +4,37 @@ import Order from '@/app/models/Order';
 import connectMongoDB from '@/app/lib/mongodb';
 import { getServerSession } from '@/app/lib/server-auth';
 import { cookies } from 'next/headers';
+import User from '@/app/models/User';
+import Cart from '@/app/models/Cart';
+import Product from '@/app/models/Product';
 
 // GET all orders
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    console.log('Fetching all orders...');
+    const userId = await getUserIdFromCookies();
     
-    // Connect to the database
-    try {
-    await connectMongoDB();
-      console.log('MongoDB connected successfully for orders API');
-    } catch (dbError) {
-      console.error('Failed to connect to MongoDB for orders:', dbError);
-      // Return mock data if database connection fails
+    if (!userId) {
       return NextResponse.json({ 
-        success: true, 
-        orders: getMockOrders() 
-      });
+        success: false, 
+        error: 'User not authenticated' 
+      }, { status: 401 });
     }
     
-    // Fetch orders with related data
-    const orders = await Order.find({})
-      .populate('user', 'name email phone')
-      .populate('items.product', 'name price images')
-      .sort({ createdAt: -1 });
+    await connectMongoDB();
     
-    console.log(`Found ${orders.length} orders in database`);
+    // Find all orders for the user
+    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
     
-    // Format orders for API response
-    const formattedOrders = orders.map((order: any) => {
-      return {
-        id: order._id.toString(),
-        orderNumber: order.orderNumber,
-        customer: {
-          id: order.user?._id?.toString() || 'guest',
-          name: order.user?.name || order.shippingAddress?.fullName || 'Guest Customer',
-          email: order.user?.email || 'guest@example.com',
-          phone: order.user?.phone || order.shippingAddress?.phone || '',
-        },
-        date: order.createdAt?.toISOString() || new Date().toISOString(),
-        status: order.status || 'pending',
-        total: order.totalAmount || 0,
-        items: order.items?.map((item: any) => ({
-          id: item.product?._id?.toString() || '',
-          name: item.product?.name || 'Product',
-          quantity: item.quantity || 1,
-          price: item.price || 0,
-          image: (item.product?.images && item.product.images[0]) || '',
-        })) || [],
-        shipping: {
-          address: `${order.shippingAddress?.addressLine1 || ''} ${order.shippingAddress?.addressLine2 || ''}`,
-          city: order.shippingAddress?.city || '',
-          state: order.shippingAddress?.state || '',
-          postalCode: order.shippingAddress?.postalCode || '',
-          country: order.shippingAddress?.country || '',
-        },
-        paymentMethod: order.paymentMethod || 'cod',
-        paymentStatus: order.isPaid ? 'paid' : 'unpaid',
-      };
-    });
-    
-    return NextResponse.json({ success: true, orders: formattedOrders });
-  } catch (err) {
-    console.error('Error fetching orders:', err);
-    // Return mock data in case of any errors
     return NextResponse.json({ 
       success: true, 
-      orders: getMockOrders() 
+      orders 
     });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to fetch orders' 
+    }, { status: 500 });
   }
 }
 
@@ -186,103 +149,143 @@ function getMockOrders() {
 // POST a new order
 export async function POST(request: Request) {
   try {
-    // Connect to MongoDB using the shared connection function
-    const connection = await connectMongoDB();
-    console.log('Creating order in database:', connection.connection.db?.databaseName || 'ecommerce');
+    const userId = await getUserIdFromCookies();
     
-    // Get user ID from cookies
-    const cookieStore = cookies();
-    const userDataCookie = cookieStore.get('userData');
-    let userId = null;
-    
-    if (userDataCookie) {
-      try {
-        const userData = JSON.parse(decodeURIComponent(userDataCookie.value));
-        userId = userData.userId;
-        console.log('Found user ID in cookies:', userId);
-      } catch (err) {
-        console.error('Error parsing userData cookie:', err);
-      }
-    }
-    
-    // Parse the request body
-    const body = await request.json();
-    console.log('Received order data:', JSON.stringify(body).substring(0, 200) + '...');
-    
-    // Ensure we have a user ID
-    if (!userId && !body.user) {
-      console.error('No user ID provided in request or cookies');
+    if (!userId) {
       return NextResponse.json({ 
         success: false, 
-        error: 'User ID is required' 
+        error: 'User not authenticated' 
+      }, { status: 401 });
+    }
+    
+    // Parse request body
+    const data = await request.json();
+    const { 
+      shippingAddress, 
+      paymentMethod, 
+      saveAddress = false
+    } = data;
+    
+    if (!shippingAddress || !paymentMethod) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Shipping address and payment method are required' 
       }, { status: 400 });
     }
     
-    // Use userId from cookies if not in body
-    if (!body.user && userId) {
-      body.user = userId;
+    await connectMongoDB();
+    
+    // Get user cart
+    const cart = await Cart.findOne({ user: userId });
+    
+    if (!cart || cart.items.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Cart is empty' 
+      }, { status: 400 });
     }
     
-    // Detailed validation with specific error messages
-    const missingFields = [];
-    
-    if (!body.items || !Array.isArray(body.items) || body.items.length === 0) {
-      missingFields.push('items');
-      console.error('Missing or empty items array in request body');
-    }
-    
-    if (!body.shippingAddress) {
-      missingFields.push('shippingAddress');
-      console.error('Missing shipping address in request body');
-    } else {
-      // Check shipping address fields
-      const requiredAddressFields = ['fullName', 'address', 'city', 'postalCode', 'country'];
-      const missingAddressFields = requiredAddressFields.filter(field => !body.shippingAddress[field]);
+    // Check if products are still in stock
+    for (const item of cart.items) {
+      const product = await Product.findById(item.product);
       
-      if (missingAddressFields.length > 0) {
-        missingFields.push(`shippingAddress fields: ${missingAddressFields.join(', ')}`);
-        console.error('Missing shipping address fields:', missingAddressFields);
+      if (!product) {
+        return NextResponse.json({ 
+          success: false, 
+          error: `Product ${item.name} no longer exists` 
+        }, { status: 400 });
+      }
+      
+      if (product.quantity < item.quantity) {
+        return NextResponse.json({ 
+          success: false, 
+          error: `Not enough stock for ${product.name}. Available: ${product.quantity}` 
+        }, { status: 400 });
       }
     }
     
-    if (!body.paymentMethod) {
-      missingFields.push('paymentMethod');
-      console.error('Missing payment method in request body');
+    // Calculate order totals
+    const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const shippingPrice = subtotal > 500 ? 0 : 50; // Free shipping over 500
+    const total = subtotal + shippingPrice;
+    
+    // Generate unique order ID
+    const orderId = generateOrderId();
+    
+    // Create order
+    const order = new Order({
+      user: userId,
+      orderId,
+      orderItems: cart.items.map(item => ({
+        product: item.product,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.image
+      })),
+      shippingAddress,
+      paymentMethod,
+      paymentResult: paymentMethod === 'COD' ? {
+        status: 'Pending',
+        method: 'Cash on Delivery'
+      } : {
+        status: 'Pending',
+        method: 'Online Payment'
+      },
+      itemsPrice: subtotal,
+      shippingPrice,
+      totalPrice: total,
+      isPaid: false,
+      paidAt: paymentMethod === 'COD' ? null : new Date(),
+      isDelivered: false
+    });
+    
+    // Save order
+    const savedOrder = await order.save();
+    
+    // Update product quantities
+    for (const item of cart.items) {
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { quantity: -item.quantity, sold: item.quantity } }
+      );
     }
     
-    if (missingFields.length > 0) {
-      return NextResponse.json({
-        success: false,
-        error: `Missing required order data: ${missingFields.join(', ')}`
-      }, { status: 400 });
+    // Save address to user profile if requested
+    if (saveAddress) {
+      await User.findByIdAndUpdate(
+        userId,
+        { 
+          $push: { 
+            addresses: {
+              fullName: shippingAddress.fullName,
+              addressLine1: shippingAddress.address,
+              city: shippingAddress.city,
+              state: shippingAddress.state || '',
+              pincode: shippingAddress.postalCode,
+              country: shippingAddress.country,
+              phone: shippingAddress.phone,
+              isDefault: false
+            } 
+          } 
+        }
+      );
     }
-
-    // Create the order
-    const order = await Order.create(body);
-    console.log('Created order:', order._id, 'in database:', connection.connection.db?.databaseName || 'ecommerce');
+    
+    // Clear cart after successful order
+    cart.items = [];
+    cart.subtotal = 0;
+    await cart.save();
     
     return NextResponse.json({ 
       success: true, 
-      order: {
-        id: order._id.toString(),
-        status: order.status
-      }
+      order: savedOrder
     }, { status: 201 });
-  } catch (err) {
-    console.error('Error creating order:', err);
-    
-    // Handle specific errors
-    if (err instanceof mongoose.Error.ValidationError) {
-      return NextResponse.json({
-        success: false,
-        error: 'Validation error',
-        details: err.message
-      }, { status: 400 });
-    }
-    
+  } catch (error) {
+    console.error('Error creating order:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Server error' 
+      error: 'Failed to create order' 
     }, { status: 500 });
   }
 }
@@ -321,4 +324,27 @@ export async function PATCH(request: Request) {
     console.error('Error updating order:', error);
     return NextResponse.json({ error: (error as Error).message || 'Error updating order' }, { status: 500 });
   }
-} 
+}
+
+// Helper function to extract user ID from cookies
+const getUserIdFromCookies = async () => {
+  const cookieStore = await cookies();
+  const userData = cookieStore.get('userData');
+  
+  if (!userData) return null;
+  
+  try {
+    const parsedData = JSON.parse(userData.value);
+    return parsedData.userId;
+  } catch (err) {
+    console.error('Error parsing user data from cookie:', err);
+    return null;
+  }
+};
+
+// Generate a unique order ID
+const generateOrderId = () => {
+  const timestamp = new Date().getTime().toString().slice(-8);
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `ORD-${timestamp}${random}`;
+}; 

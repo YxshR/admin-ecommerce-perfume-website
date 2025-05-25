@@ -55,30 +55,63 @@ export async function PUT(
 ) {
   try {
     await connectMongo();
-    const body = await request.json();
     
-    // Ensure boolean flags are correctly set
-    const productData = {
-      ...body,
-      featured: typeof body.featured === 'string' ? body.featured === 'true' : !!body.featured,
-      new_arrival: typeof body.new_arrival === 'string' ? body.new_arrival === 'true' : !!body.new_arrival, 
-      best_seller: typeof body.best_seller === 'string' ? body.best_seller === 'true' : !!body.best_seller
-    };
+    // Handle multipart form data
+    const formData = await request.formData();
     
-    // Handle images
-    if (!productData.images || productData.images.length === 0) {
-      productData.images = [{ 
-        public_id: 'placeholder', 
-        url: 'https://i.pinimg.com/564x/5f/74/9f/5f749f794a61f04c579e225e48e46b80.jpg' 
-      }];
+    // Parse product info from form data
+    const productInfoJson = formData.get('productInfo') as string;
+    if (!productInfoJson) {
+      return NextResponse.json({ success: false, error: 'Product information is required' }, { status: 400 });
     }
     
+    const productInfo = JSON.parse(productInfoJson);
+    
+    // Get existing images if any
+    const existingImagesJson = formData.get('existingImages') as string;
+    const existingImages = existingImagesJson ? JSON.parse(existingImagesJson) : [];
+    
+    // Handle new image files if they exist
+    const newImages = [];
+    for (let [key, value] of formData.entries()) {
+      if (key.startsWith('media_') && value instanceof File) {
+        // In a real app, you would upload these files to a storage service
+        // For now, we'll just use their names or simulate URLs
+        newImages.push(`/uploads/${value.name}`);
+      }
+    }
+    
+    // Combine existing and new images
+    const images = [...existingImages, ...newImages];
+    
+    // Set main image or default if none provided
+    const mainImage = productInfo.mainImage || (images.length > 0 ? images[0] : '/placeholder.jpg');
+    
+    // Create product data with all fields - Fix category to be a string not an ObjectId
+    const productData = {
+      name: productInfo.name,
+      slug: productInfo.slug,
+      description: productInfo.description,
+      price: productInfo.price,
+      comparePrice: productInfo.comparePrice,
+      images: images,
+      mainImage: mainImage,
+      category: Array.isArray(productInfo.category) ? productInfo.category.join(', ') : productInfo.category,
+      brand: productInfo.brand || 'Fraganote',
+      sku: productInfo.sku,
+      quantity: productInfo.quantity || 0,
+      featured: productInfo.featured || false,
+      isNewProduct: productInfo.isNewProduct || false,
+      onSale: productInfo.comparePrice && productInfo.comparePrice > productInfo.price,
+      attributes: {
+        gender: productInfo.gender,
+        volume: productInfo.volume,
+        about: productInfo.about,
+        disclaimer: productInfo.disclaimer || ''
+      }
+    };
+    
     console.log('Updating product:', params.id);
-    console.log('Product flags:', { 
-      featured: productData.featured, 
-      new_arrival: productData.new_arrival, 
-      best_seller: productData.best_seller 
-    });
     
     const product = await Product.findByIdAndUpdate(
       params.id,

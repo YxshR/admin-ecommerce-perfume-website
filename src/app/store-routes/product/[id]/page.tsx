@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiShoppingBag, FiHeart, FiStar, FiArrowLeft } from 'react-icons/fi';
+import CloudinaryImage from '@/app/components/ui/CloudinaryImage';
 
 interface Product {
   _id: string;
@@ -28,7 +29,7 @@ interface Product {
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { id } = params;
+  const id = params?.id as string;
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,12 +57,52 @@ export default function ProductDetailPage() {
       try {
         setLoading(true);
         
-        // In a real app, you would fetch from an API
-        // For now, using mock data for demonstration
-        const mockProduct = {
+        // Fetch the product from the API
+        const response = await fetch(`/api/products/${id}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch product');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.product) {
+          // Transform API data to match our component's format
+          const productData = {
+            _id: data.product._id,
+            name: data.product.name,
+            description: data.product.description,
+            price: data.product.price,
+            discountedPrice: data.product.comparePrice || 0,
+            category: data.product.category,
+            brand: data.product.brand || 'Fraganote',
+            images: data.product.images ? 
+              data.product.images.map((img: string) => ({ url: img })) : 
+              [{ url: data.product.mainImage || 'https://placehold.co/600x800/222/fff?text=Product' }],
+            stock: data.product.quantity || 0,
+            fragrance_notes: {
+              top: data.product.attributes?.gender ? [data.product.attributes.gender] : ['Unisex'],
+              middle: data.product.attributes?.volume ? [data.product.attributes.volume] : ['50ml'],
+              base: ['Amber', 'Musk']
+            },
+            concentration: 'Eau de Parfum',
+            size: parseInt(data.product.attributes?.volume?.replace(/[^0-9]/g, '') || '50'),
+            gender: data.product.attributes?.gender || 'Unisex'
+          };
+          
+          setProduct(productData);
+        } else {
+          throw new Error('Product not found');
+        }
+      } catch (err) {
+        console.error('Error fetching product:', err);
+        setError('Failed to load product details');
+        
+        // Fallback to mock data if needed
+        setProduct({
           _id: id as string,
           name: 'Wild Escape Perfume',
-          description: 'A captivating blend that transports you to a lush forest after rainfall. This enchanting fragrance combines fresh green notes with earthy undertones for a truly immersive experience.',
+          description: 'A captivating blend that transports you to a lush forest after rainfall.',
           price: 1499,
           discountedPrice: 1299,
           category: 'Woody',
@@ -80,12 +121,7 @@ export default function ProductDetailPage() {
           concentration: 'Eau de Parfum',
           size: 50,
           gender: 'Unisex'
-        };
-        
-        setProduct(mockProduct);
-      } catch (err) {
-        console.error('Error fetching product:', err);
-        setError('Failed to load product details');
+        });
       } finally {
         setLoading(false);
       }
@@ -197,6 +233,62 @@ export default function ProductDetailPage() {
     ? Math.round(((product.price - product.discountedPrice) / product.price) * 100)
     : 0;
   
+  // Product image gallery
+  const renderImageGallery = () => {
+    if (!product || !product.images || product.images.length === 0) {
+      return (
+        <div className="aspect-square bg-gray-100 rounded-lg">
+          <CloudinaryImage
+            src="/placeholder-image.jpg"
+            alt="Product placeholder"
+            width={600}
+            height={800}
+            className="w-full h-full object-cover rounded-lg"
+          />
+        </div>
+      );
+    }
+    
+    return (
+      <div className="grid grid-cols-1 gap-4">
+        {/* Main image */}
+        <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
+          <CloudinaryImage
+            src={product.images[selectedImage]?.url || '/placeholder-image.jpg'}
+            alt={product.name}
+            width={600}
+            height={800}
+            className="w-full h-full object-cover"
+            priority={true}
+          />
+        </div>
+        
+        {/* Thumbnail gallery */}
+        {product.images.length > 1 && (
+          <div className="grid grid-cols-5 gap-2">
+            {product.images.map((image, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedImage(index)}
+                className={`aspect-square rounded-md overflow-hidden border-2 ${
+                  selectedImage === index ? 'border-black' : 'border-transparent'
+                }`}
+              >
+                <CloudinaryImage
+                  src={image.url}
+                  alt={`${product.name} - View ${index + 1}`}
+                  width={100}
+                  height={100}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12">
@@ -253,33 +345,7 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-6">
-            {/* Main image */}
-            <div className="border border-gray-200 overflow-hidden aspect-square">
-              <img 
-                src={product.images[selectedImage]?.url || 'https://placehold.co/800x800'} 
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            {/* Image thumbnails */}
-            {product.images.length > 1 && (
-              <div className="flex space-x-4 overflow-x-auto">
-                {product.images.map((image, index) => (
-                  <button 
-                    key={index}
-                    className={`border ${selectedImage === index ? 'border-black' : 'border-gray-200'} w-24 h-24 flex-shrink-0`}
-                    onClick={() => setSelectedImage(index)}
-                  >
-                    <img 
-                      src={image.url} 
-                      alt={`${product.name} - View ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+            {renderImageGallery()}
           </div>
           
           {/* Product Info */}

@@ -10,7 +10,8 @@ import {
   FiShoppingBag, 
   FiArrowRight,
   FiShare2,
-  FiHome
+  FiHome,
+  FiPrinter
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { MdOutlineMessage } from 'react-icons/md';
@@ -170,6 +171,19 @@ export default function OrderConfirmationPage() {
     window.location.href = `sms:?&body=${encodedMessage}`;
   };
 
+  const printInvoice = () => {
+    window.print();
+  };
+
+  const downloadInvoice = () => {
+    const invoiceContent = document.getElementById('invoice-content');
+    if (!invoiceContent) return;
+    
+    // In a real implementation, you would use a library like jsPDF or 
+    // call a server endpoint to generate a PDF invoice
+    alert('Invoice download functionality would be implemented here');
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12">
@@ -237,7 +251,7 @@ export default function OrderConfirmationPage() {
             onClick={handlePrintInvoice}
             className="inline-flex items-center px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
           >
-            <FiDownload className="mr-2" /> Print Invoice
+            <FiPrinter className="mr-2" /> Print Invoice
           </button>
           <button 
             onClick={() => setShowShareOptions(!showShareOptions)}
@@ -267,7 +281,7 @@ export default function OrderConfirmationPage() {
       </div>
       
       {/* Order receipt */}
-      <div className="max-w-4xl mx-auto bg-white shadow-sm border rounded-lg overflow-hidden print:shadow-none print:border-none">
+      <div className="max-w-4xl mx-auto bg-white shadow-sm border rounded-lg overflow-hidden print:shadow-none print:border-none" id="invoice-content">
         {/* Header */}
         <div className="border-b p-6 flex justify-between items-center print:border-b-2 print:border-gray-200">
           <div>

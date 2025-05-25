@@ -45,15 +45,22 @@ export default function HomePage() {
         let products = data.products.map((product: any) => ({
           ...product,
           price: convertToRupees(product.price),
-          discountedPrice: product.discountedPrice ? convertToRupees(product.discountedPrice) : 0
+          discountedPrice: product.comparePrice ? convertToRupees(product.comparePrice) : 0,
+          // Map MongoDB fields to store-expected fields
+          featured: product.featured || false,
+          new_arrival: product.isNewProduct || false, // Use isNewProduct from MongoDB
+          best_seller: product.category.includes('Bestseller') || false,
+          images: product.images && product.images.length > 0 
+            ? product.images.map((img: string) => ({ url: img }))
+            : [{ url: product.mainImage || 'https://placehold.co/400x500' }]
         }));
         
         console.log('Total products fetched:', products.length);
         
         // Filter products correctly by their flags - ensure boolean comparison
         const featured = products.filter((p: any) => p.featured === true);
-        const newArrival = products.filter((p: any) => p.new_arrival === true);
-        const bestSeller = products.filter((p: any) => p.best_seller === true);
+        const newArrival = products.filter((p: any) => p.new_arrival === true || p.category.includes('New Arrival'));
+        const bestSeller = products.filter((p: any) => p.best_seller === true || p.category.includes('Bestseller'));
         
         console.log('Featured count:', featured.length);
         console.log('New arrivals count:', newArrival.length);

@@ -49,6 +49,12 @@ export default function CheckoutPage() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
   const [editAddressMode, setEditAddressMode] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'Online'>('COD');
+  const [processingOrder, setProcessingOrder] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [newOrderId, setNewOrderId] = useState<string | null>(null);
+  const [saveAddress, setSaveNewAddress] = useState(false);
 
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
     fullName: '',
@@ -309,7 +315,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const saveNewAddress = async () => {
+  const saveNewAddressToAccount = async () => {
     if (!editingAddress) return;
 
     try {
@@ -350,31 +356,73 @@ export default function CheckoutPage() {
     }
   };
 
+  // Handle payment method selection
+  const handlePaymentMethodChange = (method: 'COD' | 'Online') => {
+    setPaymentMethod(method);
+  };
+
   const proceedToPayment = async () => {
+    // Validate form if using a new address
+    if (showNewAddressForm && !validateForm()) {
+      return;
+    }
+
+    // Either use selected address or create a new one
+    const addressToUse = showNewAddressForm 
+      ? shippingAddress 
+      : convertSavedAddressToShippingAddress(getSelectedAddress() as SavedAddress);
+
+    if (!addressToUse) {
+      setErrors({ address: 'Please select or add a shipping address' });
+      return;
+    }
+
+    setProcessingOrder(true);
+    setOrderError(null);
+
     try {
-      if (selectedAddressId && !showNewAddressForm) {
-        const selectedAddress = getSelectedAddress();
-        if (selectedAddress) {
-          // Save shipping address to API
-          // Instead of storing in localStorage, we'll pass it to the next page via query params
-          router.push(`/payment?addressId=${selectedAddress.addressId}`);
-          return;
-        }
+      // Create the order
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shippingAddress: addressToUse,
+          paymentMethod,
+          saveAddress: showNewAddressForm && saveAddress
+        }),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create order');
       }
-      
-      if (validateForm()) {
-        // In a real app, we would save the address to the user's account here
-        // and then pass the ID to the payment page
-        router.push('/payment');
-      } else {
-        // Scroll to the first error
-        const firstErrorField = document.querySelector('.error-message');
-        if (firstErrorField) {
-          firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      if (data.success && data.order) {
+        setOrderSuccess(true);
+        setNewOrderId(data.order.orderId || data.order._id);
+
+        // If using COD, redirect to order confirmation
+        if (paymentMethod === 'COD') {
+          router.push(`/order-confirmation?id=${data.order.orderId || data.order._id}`);
+        } else {
+          // For online payment, you would normally redirect to a payment gateway
+          // For now, we'll just simulate a successful payment
+          setTimeout(() => {
+            router.push(`/order-confirmation?id=${data.order.orderId || data.order._id}`);
+          }, 2000);
         }
+      } else {
+        throw new Error('Order creation failed');
       }
     } catch (error) {
-      console.error('Error proceeding to payment:', error);
+      console.error('Error creating order:', error);
+      setOrderError(error instanceof Error ? error.message : 'Failed to create order');
+    } finally {
+      setProcessingOrder(false);
     }
   };
 
@@ -436,319 +484,331 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="mb-8">
-        <Link href="/cart" className="inline-flex items-center text-blue-600 hover:text-blue-800">
-          <FiArrowLeft className="mr-2" /> Back to Cart
-        </Link>
-      </div>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold text-center mb-8">Checkout</h1>
 
-      <h1 className="text-3xl font-medium text-center mb-8">Checkout</h1>
-      
+      {/* Order Summary and Shipping Address */}
       <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-        {/* Shipping Address Form */}
-        <div className="lg:col-span-7">
-          <div className="bg-white shadow-sm border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-medium mb-6">Shipping Address</h2>
-            
+        {/* Left Column - Shipping Address */}
+        <div className="lg:col-span-8 mb-8 lg:mb-0">
+          <div className="bg-white shadow-sm border rounded-lg overflow-hidden mb-6">
+            <div className="border-b px-6 py-4">
+              <h2 className="text-lg font-medium">Shipping Address</h2>
+            </div>
+
             {/* Saved Addresses */}
-            {savedAddresses.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-medium mb-3">Select a saved address</h3>
-                <div className="space-y-3">
+            {!showNewAddressForm && savedAddresses.length > 0 && (
+              <div className="p-6">
+                <div className="space-y-4">
                   {savedAddresses.map((address) => (
                     <div 
-                      key={address.addressId}
-                      onClick={() => handleSavedAddressSelect(address.addressId)}
-                      className={`border rounded-md p-3 cursor-pointer ${
-                        selectedAddressId === address.addressId && !showNewAddressForm 
-                          ? 'border-black bg-gray-50' 
-                          : 'border-gray-200 hover:border-gray-300'
+                      key={address.addressId} 
+                      className={`border rounded-lg p-4 cursor-pointer ${
+                        selectedAddressId === address.addressId ? 'border-blue-500 bg-blue-50' : ''
                       }`}
+                      onClick={() => handleSavedAddressSelect(address.addressId)}
                     >
-                      <div className="flex items-start">
-                        <input 
-                          type="radio"
-                          checked={selectedAddressId === address.addressId && !showNewAddressForm}
-                          onChange={() => handleSavedAddressSelect(address.addressId)}
-                          className="mt-1 mr-3"
-                        />
-                        <div className="flex-grow">
-                          <p className="font-medium">{address.fullName}</p>
-                          <p className="text-sm text-gray-600">{address.addressLine1}</p>
-                          {address.addressLine2 && <p className="text-sm text-gray-600">{address.addressLine2}</p>}
-                          <p className="text-sm text-gray-600">
-                            {address.city}, {address.state}, {address.pincode}
-                          </p>
-                          <p className="text-sm text-gray-600">{address.country}</p>
-                          <p className="text-sm text-gray-600 mt-1">Phone: {address.phone}</p>
+                      <div className="flex justify-between">
+                        <div className="flex items-start">
+                          <input
+                            type="radio"
+                            checked={selectedAddressId === address.addressId}
+                            onChange={() => handleSavedAddressSelect(address.addressId)}
+                            className="mt-1 mr-3"
+                          />
+                          <div>
+                            <p className="font-medium">{address.fullName}</p>
+                            <p>{address.addressLine1}</p>
+                            {address.addressLine2 && <p>{address.addressLine2}</p>}
+                            <p>{address.city}, {address.state} {address.pincode}</p>
+                            <p>{address.country}</p>
+                            <p className="mt-1">Phone: {address.phone}</p>
+                          </div>
                         </div>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditAddress(address);
                           }}
-                          className="text-gray-500 hover:text-black"
+                          className="text-blue-600 hover:text-blue-800"
                         >
-                          <FiEdit size={16} />
+                          <FiEdit />
                         </button>
                       </div>
                     </div>
                   ))}
-                  
-                  <div 
-                    onClick={handleAddNewAddressClick}
-                    className={`border rounded-md p-3 cursor-pointer ${
-                      showNewAddressForm && !editAddressMode
-                        ? 'border-black bg-gray-50' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <input 
-                        type="radio"
-                        checked={showNewAddressForm && !editAddressMode}
-                        onChange={handleAddNewAddressClick}
-                        className="mr-3"
-                      />
-                      <div className="flex items-center">
-                        <FiPlus className="mr-2" />
-                        <span className="font-medium">Add a new address</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
+                
+                <button
+                  type="button"
+                  onClick={handleAddNewAddressClick}
+                  className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800"
+                >
+                  <FiPlus className="mr-1" /> Add a new address
+                </button>
               </div>
             )}
             
-            {/* New Address Form or Edit Address Form */}
+            {/* New Address Form */}
             {showNewAddressForm && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium mb-3">
-                  {editAddressMode ? 'Edit Address' : 'Add New Address'}
-                </h3>
-                
-                <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium mb-1">
-                    Full Name*
-                  </label>
-                  <input
-                    type="text"
-                    id="fullName"
-                    name="fullName"
-                    value={editingAddress?.fullName || ''}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    placeholder="Enter your full name"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium mb-1">
-                    Phone Number*
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={editingAddress?.phone || ''}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    placeholder="Enter your phone number"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="addressLine1" className="block text-sm font-medium mb-1">
-                    Address Line 1*
-                  </label>
-                  <input
-                    type="text"
-                    id="addressLine1"
-                    name="addressLine1"
-                    value={editingAddress?.addressLine1 || ''}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    placeholder="Street address, P.O. box, company name"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="addressLine2" className="block text-sm font-medium mb-1">
-                    Address Line 2 (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    id="addressLine2"
-                    name="addressLine2"
-                    value={editingAddress?.addressLine2 || ''}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    placeholder="Apartment, suite, unit, building, floor, etc."
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="city" className="block text-sm font-medium mb-1">
-                      City*
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      id="city"
+                      name="fullName"
+                      value={shippingAddress.fullName}
+                      onChange={handleInputChange}
+                      className={`w-full p-2 border rounded-md ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={shippingAddress.address}
+                      onChange={handleInputChange}
+                      className={`w-full p-2 border rounded-md ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder="Street address, apartment, suite, etc."
+                    />
+                    {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
                       name="city"
-                      value={editingAddress?.city || ''}
+                      value={shippingAddress.city}
                       onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      placeholder="Enter your city"
+                      className={`w-full p-2 border rounded-md ${errors.city ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
                   </div>
                   
                   <div>
-                    <label htmlFor="state" className="block text-sm font-medium mb-1">
-                      State/Province*
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Postal Code <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      id="state"
-                      name="state"
-                      value={editingAddress?.state || ''}
+                      name="postalCode"
+                      value={shippingAddress.postalCode}
                       onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      placeholder="Enter your state"
+                      className={`w-full p-2 border rounded-md ${errors.postalCode ? 'border-red-500' : 'border-gray-300'}`}
                     />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="pincode" className="block text-sm font-medium mb-1">
-                      Postal Code*
-                    </label>
-                    <input
-                      type="text"
-                      id="pincode"
-                      name="pincode"
-                      value={editingAddress?.pincode || ''}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      placeholder="Enter your postal code"
-                    />
+                    {errors.postalCode && <p className="text-red-500 text-xs mt-1">{errors.postalCode}</p>}
                   </div>
                   
                   <div>
-                    <label htmlFor="country" className="block text-sm font-medium mb-1">
-                      Country*
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Country <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      id="country"
                       name="country"
-                      value={editingAddress?.country || ''}
+                      value={shippingAddress.country}
                       onChange={handleInputChange}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      placeholder="Enter your country"
+                      className={`w-full p-2 border rounded-md ${errors.country ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={shippingAddress.phone}
+                      onChange={handleInputChange}
+                      className={`w-full p-2 border rounded-md ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={saveAddress}
+                        onChange={(e) => setSaveNewAddress(e.target.checked)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Save this address for future orders</span>
+                    </label>
                   </div>
                 </div>
                 
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={editingAddress?.isDefault || false}
-                      onChange={(e) => {
-                        if (editingAddress) {
-                          setEditingAddress({
-                            ...editingAddress,
-                            isDefault: e.target.checked
-                          });
-                        }
-                      }}
-                      className="h-4 w-4 border-gray-300 rounded focus:ring-black"
-                    />
-                    <span className="ml-2 text-sm">Set as default address</span>
-                  </label>
-                </div>
+                {!editAddressMode && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAddressForm(false)}
+                    className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800"
+                  >
+                    <FiArrowLeft className="mr-1" /> Back to saved addresses
+                  </button>
+                )}
                 
-                <div className="flex space-x-4 mt-6">
-                  <button
-                    type="button"
-                    onClick={editAddressMode ? saveEditedAddress : saveNewAddress}
-                    className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-md"
-                  >
-                    {editAddressMode ? 'Update Address' : 'Save Address'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEditing}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                {editAddressMode && (
+                  <div className="flex mt-4 space-x-4">
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={saveEditedAddress}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
           
-          <div className="bg-white shadow-sm border rounded-lg p-6">
-            <h2 className="text-xl font-medium mb-6">Order Summary</h2>
-            
-            <div className="divide-y">
-              {cartItems.map((item) => (
-                <div key={item.id} className="py-4 flex items-center">
-                  <div className="w-16 h-16 flex-shrink-0 overflow-hidden border">
-                    <img 
-                      src={item.image || 'https://placehold.co/200x200'} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover"
+          {/* Payment Methods */}
+          <div className="bg-white shadow-sm border rounded-lg overflow-hidden">
+            <div className="border-b px-6 py-4">
+              <h2 className="text-lg font-medium">Payment Method</h2>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div 
+                  className={`border rounded-lg p-4 cursor-pointer ${
+                    paymentMethod === 'COD' ? 'border-blue-500 bg-blue-50' : ''
+                  }`}
+                  onClick={() => handlePaymentMethodChange('COD')}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={paymentMethod === 'COD'}
+                      onChange={() => handlePaymentMethodChange('COD')}
+                      className="mr-3"
                     />
-                  </div>
-                  <div className="ml-4 flex-1">
-                    <h3 className="text-sm font-medium">{item.name}</h3>
-                    <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">₹{(item.price * item.quantity).toFixed(2)}</p>
+                    <div>
+                      <p className="font-medium">Cash on Delivery</p>
+                      <p className="text-sm text-gray-600">Pay when you receive your order</p>
+                    </div>
                   </div>
                 </div>
-              ))}
+                
+                <div 
+                  className={`border rounded-lg p-4 cursor-pointer ${
+                    paymentMethod === 'Online' ? 'border-blue-500 bg-blue-50' : ''
+                  }`}
+                  onClick={() => handlePaymentMethodChange('Online')}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={paymentMethod === 'Online'}
+                      onChange={() => handlePaymentMethodChange('Online')}
+                      className="mr-3"
+                    />
+                    <div>
+                      <p className="font-medium">Online Payment</p>
+                      <p className="text-sm text-gray-600">Pay now using credit/debit card or UPI</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         
-        {/* Order Summary */}
-        <div className="lg:col-span-5 mt-8 lg:mt-0">
-          <div className="bg-white shadow-sm border rounded-lg p-6 sticky top-6">
-            <h2 className="text-xl font-medium mb-6">Payment Summary</h2>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between pb-4">
-                <span>Subtotal</span>
-                <span>₹{subtotal.toFixed(2)}</span>
+        {/* Right Column - Order Summary */}
+        <div className="lg:col-span-4">
+          <div className="bg-white shadow-sm border rounded-lg overflow-hidden">
+            <div className="border-b px-6 py-4">
+              <h2 className="text-lg font-medium">Order Summary</h2>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">{cartItems.length} items in cart</p>
+                <div className="max-h-60 overflow-y-auto mb-4">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex items-center py-2 border-b">
+                      <div className="w-12 h-12 flex-shrink-0 overflow-hidden border mr-3">
+                        <img 
+                          src={item.image || 'https://placehold.co/100x100'} 
+                          alt={item.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-grow">
+                        <p className="text-sm font-medium">{item.name}</p>
+                        <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                      </div>
+                      <div className="text-sm font-medium">
+                        ₹{(item.price * item.quantity).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
               
-              <div className="flex justify-between pb-4">
-                <span>Shipping</span>
-                <span>{shippingPrice === 0 ? 'Free' : `₹${shippingPrice.toFixed(2)}`}</span>
+              <div className="space-y-2 border-b pb-4 mb-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Shipping</span>
+                  <span>{shippingPrice > 0 ? `₹${shippingPrice.toFixed(2)}` : 'Free'}</span>
+                </div>
               </div>
               
-              <div className="flex justify-between pt-4 border-t font-medium">
+              <div className="flex justify-between font-medium text-lg">
                 <span>Total</span>
                 <span>₹{total.toFixed(2)}</span>
               </div>
               
-              <div className="pt-6">
-                <button 
-                  onClick={proceedToPayment} 
-                  className="w-full py-3 bg-black text-white hover:bg-gray-900 flex items-center justify-center"
-                >
-                  <FiCheckCircle className="mr-2" /> Proceed to Payment
-                </button>
-              </div>
+              {orderError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+                  {orderError}
+                </div>
+              )}
               
-              <p className="text-sm text-gray-500 text-center mt-4">
-                Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our privacy policy.
+              <button
+                type="button"
+                onClick={proceedToPayment}
+                disabled={processingOrder || cartItems.length === 0}
+                className={`w-full mt-6 py-3 px-4 bg-blue-600 text-white rounded-md ${
+                  processingOrder || cartItems.length === 0 ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'
+                }`}
+              >
+                {processingOrder ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : paymentMethod === 'COD' ? 'Place Order' : 'Proceed to Payment'
+                }
+              </button>
+              
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                By placing your order, you agree to our Terms of Service and Privacy Policy
               </p>
             </div>
           </div>

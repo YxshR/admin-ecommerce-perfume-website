@@ -61,9 +61,12 @@ export async function GET(request: Request) {
     const isLoggedIn = cookie.includes('isLoggedIn=true');
     
     if (!isLoggedIn) {
+      // For non-authenticated users, we'll return a 401 but with a descriptive message
+      // The client should handle this by using localStorage cart
       return NextResponse.json({ 
         success: false, 
-        error: 'Unauthorized - Please log in' 
+        error: 'Not authenticated - Use localStorage cart', 
+        isGuest: true
       }, { 
         status: 401,
         headers: createNoCacheHeaders()
@@ -74,7 +77,8 @@ export async function GET(request: Request) {
     if (!userId) {
       return NextResponse.json({ 
         success: false, 
-        error: 'User data not found' 
+        error: 'User data not found',
+        isGuest: true
       }, { status: 401 });
     }
     
@@ -128,9 +132,12 @@ export async function POST(request: Request) {
     const isLoggedIn = cookie.includes('isLoggedIn=true');
     
     if (!isLoggedIn) {
+      // For non-authenticated users, we'll return a specific status code
+      // The client should handle this by using localStorage cart
       return NextResponse.json({ 
         success: false, 
-        error: 'Unauthorized - Please log in' 
+        error: 'Not authenticated - Use localStorage cart',
+        isGuest: true
       }, { status: 401 });
     }
     
@@ -138,7 +145,8 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ 
         success: false, 
-        error: 'User data not found' 
+        error: 'User data not found',
+        isGuest: true
       }, { status: 401 });
     }
     

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { decrypt } from './app/lib/auth-utils';
+import { decrypt } from './src/app/lib/auth-utils';
 
 // Protected paths that require authentication
 const protectedPaths = [

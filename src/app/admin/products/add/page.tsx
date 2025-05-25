@@ -29,6 +29,7 @@ interface ProductData {
   media: ProductMedia[];
   featured: boolean;
   inStock: boolean;
+  quantity: number;
 }
 
 export default function AddProductPage() {
@@ -55,7 +56,8 @@ export default function AddProductPage() {
     disclaimer: '',
     media: [],
     featured: false,
-    inStock: true
+    inStock: true,
+    quantity: 100
   });
   
   // Available categories
@@ -121,43 +123,133 @@ export default function AddProductPage() {
   };
   
   // Handle image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newMediaItems: ProductMedia[] = Array.from(e.target.files).map(file => ({
-        id: Math.random().toString(36).substring(2, 9),
-        type: 'image',
-        url: URL.createObjectURL(file),
-        file: file,
-        preview: URL.createObjectURL(file)
-      }));
+      // Show loading state
+      setIsSaving(true);
       
-      setProductData(prev => ({
-        ...prev,
-        media: [...prev.media, ...newMediaItems]
-      }));
+      try {
+        const uploadedItems: ProductMedia[] = [];
+        
+        for (const file of Array.from(e.target.files)) {
+          // Create a FormData object for each file
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('folder', 'perfume_products');
+          
+          // Upload to Cloudinary via our API
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            uploadedItems.push({
+              id: data.public_id,
+              type: 'image',
+              url: data.url,
+              preview: data.url
+            });
+          }
+        }
+        
+        // Update product data with new media items
+        setProductData(prev => ({
+          ...prev,
+          media: [...prev.media, ...uploadedItems]
+        }));
+        
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        setSaveError('Failed to upload images. Please try again.');
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
   
   // Handle video upload
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newMediaItems: ProductMedia[] = Array.from(e.target.files).map(file => ({
-        id: Math.random().toString(36).substring(2, 9),
-        type: 'video',
-        url: URL.createObjectURL(file),
-        file: file,
-        preview: URL.createObjectURL(file)
-      }));
+      // Show loading state
+      setIsSaving(true);
       
-      setProductData(prev => ({
-        ...prev,
-        media: [...prev.media, ...newMediaItems]
-      }));
+      try {
+        const uploadedItems: ProductMedia[] = [];
+        
+        for (const file of Array.from(e.target.files)) {
+          // Create a FormData object for each file
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('folder', 'perfume_videos');
+          formData.append('resourceType', 'video');
+          
+          // Upload to Cloudinary via our API
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            uploadedItems.push({
+              id: data.public_id,
+              type: 'video',
+              url: data.url,
+              preview: data.url
+            });
+          }
+        }
+        
+        // Update product data with new media items
+        setProductData(prev => ({
+          ...prev,
+          media: [...prev.media, ...uploadedItems]
+        }));
+        
+      } catch (error) {
+        console.error('Error uploading videos:', error);
+        setSaveError('Failed to upload videos. Please try again.');
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
   
   // Handle media deletion
-  const handleDeleteMedia = (id: string) => {
+  const handleDeleteMedia = async (id: string) => {
+    // Find the media item to delete
+    const mediaItem = productData.media.find(item => item.id === id);
+    
+    if (mediaItem) {
+      // If the URL is from Cloudinary, delete it from the server
+      if (mediaItem.url.includes('res.cloudinary.com')) {
+        try {
+          const response = await fetch(`/api/upload/cloudinary?publicId=${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+          });
+          
+          if (!response.ok) {
+            console.error('Failed to delete media from Cloudinary');
+          }
+        } catch (error) {
+          console.error('Error deleting media from Cloudinary:', error);
+        }
+      }
+    }
+    
+    // Remove from local state regardless of server deletion result
     setProductData(prev => ({
       ...prev,
       media: prev.media.filter(item => item.id !== id)
@@ -224,24 +316,75 @@ export default function AddProductPage() {
     setSaveError('');
     
     try {
-      // In a real app, this would be an API call to save the product data
-      // For now, we'll simulate a successful save
-      console.log('Product data to save:', productData);
+      // Get admin token for authorization
+      const token = getAdminToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Prepare form data
+      const formData = new FormData();
       
+      // Add basic product info
+      const productInfo = {
+        name: productData.name,
+        description: productData.description,
+        price: productData.price,
+        comparePrice: productData.discountPrice,
+        category: productData.category,
+        gender: productData.gender,
+        volume: productData.volume,
+        about: productData.about,
+        disclaimer: productData.disclaimer,
+        featured: productData.featured,
+        new_arrival: productData.category.includes('New Arrival'),
+        best_seller: productData.category.includes('Bestseller'),
+        in_stock: productData.inStock,
+        quantity: productData.quantity,
+        slug: productData.name.toLowerCase().replace(/\s+/g, '-'), // Generate slug from name
+        sku: `SKU-${Date.now().toString().slice(-8)}` // Generate a unique SKU
+      };
+      
+      // Add product info as JSON
+      formData.append('productInfo', JSON.stringify(productInfo));
+      
+      // Add media files
+      productData.media.forEach((media, index) => {
+        if (media.file) {
+          formData.append(`media_${index}`, media.file);
+        }
+      });
+      
+      // Set mainImage to the first image if available
+      const firstImage = productData.media.find(m => m.type === 'image');
+      if (firstImage) {
+        formData.append('mainImage', firstImage.url);
+      }
+      
+      // Make API call to save product
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save product');
+      }
+      
+      // Show success message
       setSaveSuccess(true);
       setTimeout(() => {
         setSaveSuccess(false);
-      }, 3000);
+        router.push('/admin/products'); // Redirect to products list after success
+      }, 1500);
       
-      // Optionally clear form or redirect
-      // setProductData({ ... }); // Reset form
-      // router.push('/admin/products'); // Redirect to products list
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving product:', error);
-      setSaveError('Failed to save product. Please try again.');
+      setSaveError(error.message || 'Failed to save product. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -436,6 +579,30 @@ export default function AddProductPage() {
                     In Stock
                   </label>
                 </div>
+              </div>
+
+              {/* Quantity Field */}
+              <div className="col-span-2">
+                <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+                  Stock Quantity <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="quantity"
+                  name="quantity"
+                  value={productData.quantity}
+                  onChange={handleNumberChange}
+                  disabled={!productData.inStock}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !productData.inStock ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
+                  min="0"
+                  step="1"
+                  required
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  {productData.inStock ? 'Enter the available stock quantity' : 'Enable "In Stock" to set quantity'}
+                </p>
               </div>
             </div>
           </div>

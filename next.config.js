@@ -13,7 +13,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ['placehold.co', 'storage.googleapis.com'],
+    domains: ['placehold.co', 'storage.googleapis.com', 'res.cloudinary.com'],
   },
   // Disable source maps in production to reduce bundle size
   productionBrowserSourceMaps: false,
@@ -24,7 +24,10 @@ const nextConfig = {
     MONGODB_URI: 'mongodb+srv://avitoluxury:l2AuSv97J5FW4ZvU@freetester.667mr8b.mongodb.net/ecommerce',
     JWT_SECRET: 'fraganote_admin_secret_key_2025',
     ADMIN_EMAIL: 'admin@example.com',
-    ADMIN_PHONE: '8126518755'
+    ADMIN_PHONE: '8126518755',
+    CLOUDINARY_API_SECRET: 'YOUR_CLOUDINARY_API_SECRET_HERE', // Replace with your actual API secret
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: 'dzzxpyqif',
+    NEXT_PUBLIC_CLOUDINARY_API_KEY: '992368173733427'
   },
   output: 'standalone',
   // Add experimental features to improve compatibility with Vercel deployments

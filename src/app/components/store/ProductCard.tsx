@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiShoppingBag, FiHeart, FiStar } from 'react-icons/fi';
 import { useAuth } from '@/app/components/AuthProvider';
+import CloudinaryImage from '../ui/CloudinaryImage';
 
 interface Product {
   _id: string;
@@ -248,64 +249,69 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Wishlist button */}
         <button
           onClick={handleToggleWishlist}
-          className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-sm hover:bg-gray-100 transition-colors duration-200 z-10 opacity-0 group-hover:opacity-100"
-          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          className="absolute top-3 right-3 z-10 bg-white p-2 rounded-full shadow-md transition-all hover:scale-110"
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
-          <FiHeart className={`h-5 w-5 ${isWishlisted ? 'text-red-500 fill-current' : 'text-black'}`} />
+          <FiHeart 
+            className={`w-5 h-5 ${isWishlisted ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
+          />
         </button>
         
-        {/* Product image */}
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
-          <img 
-            src={product.images[0]?.url || 'https://placehold.co/400x500'} 
+        {/* Product Image */}
+        <div className="relative h-64 md:h-80 overflow-hidden">
+          <CloudinaryImage
+            src={product.images[0]?.url || '/placeholder-image.jpg'}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            width={400}
+            height={500}
+            className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
+            crop="fill"
           />
         </div>
-      </Link>
-      
-      {/* Product details */}
-      <div className="p-4 text-center flex-grow flex flex-col">
-        <Link href={`/product/${product._id}`} className="block flex-grow">
-          {/* Category */}
-          <div className="text-xs text-gray-500 uppercase mb-1">
-            {product.category}
-          </div>
-          
-          {/* Title */}
-          <h3 className="text-sm font-medium mb-2 line-clamp-1">
-            {product.name}
-          </h3>
-          
-          {/* Product Type */}
-          <p className="text-xs text-gray-500 mb-2 line-clamp-1">
-            {product.category} | Perfume
-          </p>
-          
-          {/* Price */}
-          <div className="flex items-center justify-center mt-auto mb-3">
-            {product.discountedPrice > 0 ? (
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-black">₹{product.discountedPrice.toFixed(2)}</span>
-                  <span className="text-xs text-gray-500 line-through">MRP ₹{product.price.toFixed(2)}</span>
-                </div>
-              </div>
-            ) : (
-              <span className="text-sm font-medium text-black">₹{product.price.toFixed(2)}</span>
-            )}
-          </div>
-        </Link>
         
-        {/* Add to cart button */}
-        <button 
-          onClick={handleAddToCart}
-          disabled={isAddingToCart}
-          className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-black text-white hover:bg-[#333] transition-all duration-300"
-        >
-          <span className="text-xs font-medium uppercase">{isAddingToCart ? 'Added!' : 'Add to Cart'}</span>
-        </button>
-      </div>
+        {/* Product Info */}
+        <div className="p-4 flex-grow flex flex-col">
+          <Link href={`/product/${product._id}`} className="block flex-grow">
+            {/* Category */}
+            <div className="text-xs text-gray-500 uppercase mb-1">
+              {product.category}
+            </div>
+            
+            {/* Title */}
+            <h3 className="text-sm font-medium mb-2 line-clamp-1">
+              {product.name}
+            </h3>
+            
+            {/* Product Type */}
+            <p className="text-xs text-gray-500 mb-2 line-clamp-1">
+              {product.category} | Perfume
+            </p>
+            
+            {/* Price */}
+            <div className="flex items-center justify-center mt-auto mb-3">
+              {product.discountedPrice > 0 ? (
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-black">₹{product.discountedPrice.toFixed(2)}</span>
+                    <span className="text-xs text-gray-500 line-through">MRP ₹{product.price.toFixed(2)}</span>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-sm font-medium text-black">₹{product.price.toFixed(2)}</span>
+              )}
+            </div>
+          </Link>
+          
+          {/* Add to cart button */}
+          <button 
+            onClick={handleAddToCart}
+            disabled={isAddingToCart}
+            className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-black text-white hover:bg-[#333] transition-all duration-300"
+          >
+            <span className="text-xs font-medium uppercase">{isAddingToCart ? 'Added!' : 'Add to Cart'}</span>
+          </button>
+        </div>
+      </Link>
     </div>
   );
 } 

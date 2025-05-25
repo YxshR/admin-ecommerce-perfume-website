@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings, FiMail } from 'react-icons/fi';
+import { FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings, FiMail, FiLayout, FiImage } from 'react-icons/fi';
 import { useAdminAuth, adminLogout } from '@/app/lib/admin-auth';
 
 interface AdminLayoutProps {
@@ -99,6 +99,16 @@ export default function AdminLayout({ children, activeRoute = '/admin/dashboard'
             </div>
           </Link>
           <Link 
+            href="/admin/layout" 
+            className={`block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900 ${
+              activeRoute === '/admin/layout' ? 'bg-gray-100 text-gray-900 border-l-4 border-blue-600' : ''
+            }`}
+          >
+            <div className="flex items-center">
+              <FiLayout className="mr-3" /> Layout
+            </div>
+          </Link>
+          <Link 
             href="/admin/users" 
             className={`block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900 ${
               activeRoute === '/admin/users' ? 'bg-gray-100 text-gray-900 border-l-4 border-blue-600' : ''
@@ -136,6 +146,16 @@ export default function AdminLayout({ children, activeRoute = '/admin/dashboard'
           >
             <div className="flex items-center">
               <FiSettings className="mr-3" /> System
+            </div>
+          </Link>
+          <Link 
+            href="/admin/cloudinary-test" 
+            className={`block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900 ${
+              activeRoute === '/admin/cloudinary-test' ? 'bg-gray-100 text-gray-900 border-l-4 border-blue-600' : ''
+            }`}
+          >
+            <div className="flex items-center">
+              <FiImage className="mr-3" /> Cloudinary Test
             </div>
           </Link>
           <button 

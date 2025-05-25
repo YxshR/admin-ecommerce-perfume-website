@@ -9,7 +9,7 @@ export interface IProductBase {
   comparePrice?: number;
   images: string[];
   mainImage: string;
-  category: mongoose.Types.ObjectId;
+  category: string;
   subcategory?: mongoose.Types.ObjectId;
   brand?: string;
   sku: string;
@@ -106,8 +106,7 @@ const ProductSchema = new Schema({
     required: [true, 'Please provide a main product image']
   },
   category: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category',
+    type: String,
     required: [true, 'Please select a category']
   },
   subcategory: {
