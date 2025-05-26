@@ -408,7 +408,7 @@ export default function CheckoutPage() {
         // If using COD, redirect to order confirmation
         if (paymentMethod === 'COD') {
           router.push(`/order-confirmation?id=${data.order.orderId || data.order._id}`);
-        } else {
+      } else {
           // For online payment, you would normally redirect to a payment gateway
           // For now, we'll just simulate a successful payment
           setTimeout(() => {
@@ -495,29 +495,29 @@ export default function CheckoutPage() {
             <div className="border-b px-6 py-4">
               <h2 className="text-lg font-medium">Shipping Address</h2>
             </div>
-
+            
             {/* Saved Addresses */}
             {!showNewAddressForm && savedAddresses.length > 0 && (
               <div className="p-6">
                 <div className="space-y-4">
                   {savedAddresses.map((address) => (
                     <div 
-                      key={address.addressId} 
+                      key={address.addressId}
                       className={`border rounded-lg p-4 cursor-pointer ${
                         selectedAddressId === address.addressId ? 'border-blue-500 bg-blue-50' : ''
                       }`}
                       onClick={() => handleSavedAddressSelect(address.addressId)}
                     >
                       <div className="flex justify-between">
-                        <div className="flex items-start">
-                          <input
-                            type="radio"
+                      <div className="flex items-start">
+                        <input 
+                          type="radio"
                             checked={selectedAddressId === address.addressId}
-                            onChange={() => handleSavedAddressSelect(address.addressId)}
-                            className="mt-1 mr-3"
-                          />
+                          onChange={() => handleSavedAddressSelect(address.addressId)}
+                          className="mt-1 mr-3"
+                        />
                           <div>
-                            <p className="font-medium">{address.fullName}</p>
+                          <p className="font-medium">{address.fullName}</p>
                             <p>{address.addressLine1}</p>
                             {address.addressLine2 && <p>{address.addressLine2}</p>}
                             <p>{address.city}, {address.state} {address.pincode}</p>
@@ -556,32 +556,32 @@ export default function CheckoutPage() {
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="fullName"
+                  </label>
+                  <input
+                    type="text"
+                    name="fullName"
                       value={shippingAddress.fullName}
-                      onChange={handleInputChange}
+                    onChange={handleInputChange}
                       className={`w-full p-2 border rounded-md ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
-                    />
+                  />
                     {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
-                  </div>
-                  
+                </div>
+                
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Address <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
+                  </label>
+                  <input
+                    type="text"
                       name="address"
                       value={shippingAddress.address}
-                      onChange={handleInputChange}
+                    onChange={handleInputChange}
                       className={`w-full p-2 border rounded-md ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
                       placeholder="Street address, apartment, suite, etc."
                     />
                     {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
-                  </div>
-                  
+                </div>
+                
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       City <span className="text-red-500">*</span>
@@ -608,8 +608,8 @@ export default function CheckoutPage() {
                       className={`w-full p-2 border rounded-md ${errors.postalCode ? 'border-red-500' : 'border-gray-300'}`}
                     />
                     {errors.postalCode && <p className="text-red-500 text-xs mt-1">{errors.postalCode}</p>}
-                  </div>
-                  
+                </div>
+                
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Country <span className="text-red-500">*</span>
@@ -636,18 +636,18 @@ export default function CheckoutPage() {
                       className={`w-full p-2 border rounded-md ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
                     />
                     {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
-                  </div>
-                  
+                </div>
+                
                   <div className="md:col-span-2">
-                    <label className="flex items-center">
-                      <input 
-                        type="checkbox" 
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
                         checked={saveAddress}
                         onChange={(e) => setSaveNewAddress(e.target.checked)}
                         className="mr-2"
                       />
                       <span className="text-sm">Save this address for future orders</span>
-                    </label>
+                  </label>
                   </div>
                 </div>
                 
@@ -663,13 +663,13 @@ export default function CheckoutPage() {
                 
                 {editAddressMode && (
                   <div className="flex mt-4 space-x-4">
-                    <button
-                      type="button"
-                      onClick={cancelEditing}
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
                       className="px-4 py-2 border border-gray-300 rounded-md text-gray-700"
-                    >
-                      Cancel
-                    </button>
+                  >
+                    Cancel
+                  </button>
                     <button
                       type="button"
                       onClick={saveEditedAddress}
@@ -677,7 +677,7 @@ export default function CheckoutPage() {
                     >
                       Save Changes
                     </button>
-                  </div>
+                </div>
                 )}
               </div>
             )}
@@ -726,7 +726,7 @@ export default function CheckoutPage() {
                     <div>
                       <p className="font-medium">Online Payment</p>
                       <p className="text-sm text-gray-600">Pay now using credit/debit card or UPI</p>
-                    </div>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -787,9 +787,9 @@ export default function CheckoutPage() {
                 </div>
               )}
               
-              <button
+                <button 
                 type="button"
-                onClick={proceedToPayment}
+                  onClick={proceedToPayment} 
                 disabled={processingOrder || cartItems.length === 0}
                 className={`w-full mt-6 py-3 px-4 bg-blue-600 text-white rounded-md ${
                   processingOrder || cartItems.length === 0 ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'
@@ -805,7 +805,7 @@ export default function CheckoutPage() {
                   </span>
                 ) : paymentMethod === 'COD' ? 'Place Order' : 'Proceed to Payment'
                 }
-              </button>
+                </button>
               
               <p className="text-xs text-gray-500 mt-2 text-center">
                 By placing your order, you agree to our Terms of Service and Privacy Policy

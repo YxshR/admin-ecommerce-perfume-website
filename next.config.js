@@ -25,10 +25,7 @@ const nextConfig = {
     JWT_SECRET: 'aviotoluxury_admin_secret_key_2025',
     ADMIN_EMAIL: 'admin@example.com',
     ADMIN_PHONE: '8126518755',
-    CLOUDINARY_CLOUD_NAME: 'dzzxpyqif',
-    CLOUDINARY_API_KEY: '992368173733427',
-    CLOUDINARY_API_SECRET: 'kQuf9IxR7a503I0y-J_QVzx4RI8',
-    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: 'dzzxpyqif'
+    CLOUDINARY_API_SECRET: 'cloudinary://992368173733427:kQuf9IxR7a503I0y-J_QVzx4RI8@dzzxpyqif' // Replace with your actual API secret
   },
   output: 'standalone',
   // Add experimental features to improve compatibility with Vercel deployments

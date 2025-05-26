@@ -53,9 +53,9 @@ export default function AdminSettings() {
   ]);
   
   useEffect(() => {
-    // Load saved settings from localStorage or API
-    loadSettings();
-    setLoading(false);
+      // Load saved settings from localStorage or API
+      loadSettings();
+      setLoading(false);
   }, []);
   
   // Load settings from localStorage (in a real app, this would be from your API)
@@ -126,83 +126,83 @@ export default function AdminSettings() {
   
   return (
     <AdminLayout activeRoute="/admin/settings">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Store Settings</h1>
-        <p className="text-gray-600">Customize your store's appearance and functionality</p>
-      </div>
-      
-      {/* Success/Error Messages */}
-      {saveSuccess && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-          Settings saved successfully!
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Store Settings</h1>
+          <p className="text-gray-600">Customize your store's appearance and functionality</p>
         </div>
-      )}
-      
-      {saveError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {saveError}
-        </div>
-      )}
-      
-      <div className="grid grid-cols-1 gap-8">
-        {/* Navigation Items Configuration */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Navigation Bar Items</h2>
-          <p className="text-gray-500 mb-6">Enable or disable navigation items on your store. When disabled, the page will not be accessible from the navigation.</p>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Path
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {navItems.map((item) => (
-                  <tr key={item.id}>
+        
+        {/* Success/Error Messages */}
+        {saveSuccess && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+            Settings saved successfully!
+          </div>
+        )}
+        
+        {saveError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {saveError}
+          </div>
+        )}
+        
+        <div className="grid grid-cols-1 gap-8">
+          {/* Navigation Items Configuration */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">Navigation Bar Items</h2>
+            <p className="text-gray-500 mb-6">Enable or disable navigation items on your store. When disabled, the page will not be accessible from the navigation.</p>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Path
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {navItems.map((item) => (
+                    <tr key={item.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                    </td>
+                      </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">{item.path}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         item.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {item.enabled ? 'Enabled' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => toggleNavItem(item.id)}
+                        }`}>
+                          {item.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button 
+                          onClick={() => toggleNavItem(item.id)}
                         className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
                       >
                         {item.enabled ? <FiEyeOff className="mr-1" /> : <FiEye className="mr-1" />}
                         {item.enabled ? 'Disable' : 'Enable'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-        
-        {/* Store Components Configuration */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Store Page Components</h2>
+          
+          {/* Store Components Configuration */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">Store Page Components</h2>
           <p className="text-gray-500 mb-6">Enable or disable various components displayed on your store pages.</p>
           
           <div className="overflow-x-auto">
@@ -224,7 +224,7 @@ export default function AdminSettings() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {storeComponents.map((component) => (
+              {storeComponents.map((component) => (
                   <tr key={component.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{component.name}</div>
@@ -236,35 +236,35 @@ export default function AdminSettings() {
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         component.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {component.enabled ? 'Enabled' : 'Disabled'}
-                      </span>
+                      {component.enabled ? 'Enabled' : 'Disabled'}
+                    </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => toggleComponent(component.id)}
+                    <button 
+                      onClick={() => toggleComponent(component.id)}
                         className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
                       >
                         {component.enabled ? <FiEyeOff className="mr-1" /> : <FiEye className="mr-1" />}
                         {component.enabled ? 'Disable' : 'Enable'}
-                      </button>
+                    </button>
                     </td>
                   </tr>
-                ))}
+              ))}
               </tbody>
             </table>
           </div>
+          </div>
         </div>
-      </div>
-      
-      {/* Save Button */}
-      <div className="mt-8 flex justify-end">
-        <button
-          onClick={saveSettings}
+        
+        {/* Save Button */}
+        <div className="mt-8 flex justify-end">
+          <button
+            onClick={saveSettings}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
+          >
           <FiSave className="mr-2 -ml-1 h-5 w-5" />
           Save Settings
-        </button>
+          </button>
       </div>
     </AdminLayout>
   );

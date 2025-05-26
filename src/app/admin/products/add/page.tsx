@@ -149,8 +149,8 @@ export default function AddProductPage() {
       
       if (data.success) {
         // Add the uploaded image to the list
-        setProductData(prev => ({
-          ...prev,
+      setProductData(prev => ({
+        ...prev,
           media: [...prev.media, { type: 'image', url: data.url, id: data.public_id }]
         }));
       } else {
@@ -192,8 +192,8 @@ export default function AddProductPage() {
       
       if (data.success) {
         // Add the uploaded video to the list
-        setProductData(prev => ({
-          ...prev,
+      setProductData(prev => ({
+        ...prev,
           media: [...prev.media, { type: 'video', url: data.url, id: data.public_id }]
         }));
       } else {
@@ -381,185 +381,185 @@ export default function AddProductPage() {
   // Render the page inside the AdminLayout component
   return (
     <AdminLayout activeRoute="/admin/products">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
-            <p className="text-gray-600">Create a new perfume product</p>
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-8 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Add New Product</h1>
+              <p className="text-gray-600">Create a new perfume product</p>
+            </div>
+            <Link 
+              href="/admin/products" 
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            >
+              Back to Products
+            </Link>
           </div>
-          <Link 
-            href="/admin/products" 
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-          >
-            Back to Products
-          </Link>
-        </div>
-        
-        {/* Success/Error Messages */}
-        {saveSuccess && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-            Product saved successfully!
-          </div>
-        )}
-        
-        {saveError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {saveError}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg overflow-hidden">
-          {/* Basic Details */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-medium mb-4">Basic Details</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Product Name */}
-              <div className="col-span-2">
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={productData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter product name"
-                  required
-                />
-              </div>
+          
+          {/* Success/Error Messages */}
+          {saveSuccess && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+              Product saved successfully!
+            </div>
+          )}
+          
+          {saveError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {saveError}
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg overflow-hidden">
+            {/* Basic Details */}
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-medium mb-4">Basic Details</h2>
               
-              {/* Gender */}
-              <div>
-                <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="gender"
-                  name="gender"
-                  value={productData.gender}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select gender</option>
-                  {genderOptions.map(gender => (
-                    <option key={gender} value={gender}>{gender}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Volume */}
-              <div>
-                <label htmlFor="volume" className="block text-sm font-medium text-gray-700 mb-1">
-                  Volume <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="volume"
-                  name="volume"
-                  value={productData.volume}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select volume</option>
-                  {volumeOptions.map(volume => (
-                    <option key={volume} value={volume}>{volume}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Price */}
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (₹) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="price"
-                  name="price"
-                  value={productData.price}
-                  onChange={handleNumberChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-              
-              {/* Discount Price */}
-              <div>
-                <label htmlFor="discountPrice" className="block text-sm font-medium text-gray-700 mb-1">
-                  Discount Price (₹) <span className="text-gray-500 text-xs font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="number"
-                  id="discountPrice"
-                  name="discountPrice"
-                  value={productData.discountPrice || ''}
-                  onChange={handleNumberChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                />
-              </div>
-              
-              {/* Categories */}
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categories <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {categoryOptions.map(category => (
-                    <div key={category} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id={`category-${category}`}
-                        checked={productData.category.includes(category)}
-                        onChange={() => handleCategoryChange(category)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor={`category-${category}`} className="ml-2 text-sm text-gray-700">
-                        {category}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Status */}
-              <div className="col-span-2 flex space-x-6">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    name="featured"
-                    checked={productData.featured}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="featured" className="ml-2 text-sm text-gray-700">
-                    Featured Product
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Product Name */}
+                <div className="col-span-2">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Product Name <span className="text-red-500">*</span>
                   </label>
-                </div>
-                <div className="flex items-center">
                   <input
-                    type="checkbox"
-                    id="inStock"
-                    name="inStock"
-                    checked={productData.inStock}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={productData.name}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter product name"
+                    required
                   />
-                  <label htmlFor="inStock" className="ml-2 text-sm text-gray-700">
-                    In Stock
-                  </label>
                 </div>
-              </div>
+                
+                {/* Gender */}
+                <div>
+                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="gender"
+                    name="gender"
+                    value={productData.gender}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select gender</option>
+                    {genderOptions.map(gender => (
+                      <option key={gender} value={gender}>{gender}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Volume */}
+                <div>
+                  <label htmlFor="volume" className="block text-sm font-medium text-gray-700 mb-1">
+                    Volume <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="volume"
+                    name="volume"
+                    value={productData.volume}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select volume</option>
+                    {volumeOptions.map(volume => (
+                      <option key={volume} value={volume}>{volume}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Price */}
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                    Price (₹) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="price"
+                    name="price"
+                    value={productData.price}
+                    onChange={handleNumberChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                
+                {/* Discount Price */}
+                <div>
+                  <label htmlFor="discountPrice" className="block text-sm font-medium text-gray-700 mb-1">
+                    Discount Price (₹) <span className="text-gray-500 text-xs font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="discountPrice"
+                    name="discountPrice"
+                    value={productData.discountPrice || ''}
+                    onChange={handleNumberChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                {/* Categories */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Categories <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {categoryOptions.map(category => (
+                      <div key={category} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`category-${category}`}
+                          checked={productData.category.includes(category)}
+                          onChange={() => handleCategoryChange(category)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={`category-${category}`} className="ml-2 text-sm text-gray-700">
+                          {category}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Status */}
+                <div className="col-span-2 flex space-x-6">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="featured"
+                      name="featured"
+                      checked={productData.featured}
+                      onChange={handleCheckboxChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="featured" className="ml-2 text-sm text-gray-700">
+                      Featured Product
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="inStock"
+                      name="inStock"
+                      checked={productData.inStock}
+                      onChange={handleCheckboxChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="inStock" className="ml-2 text-sm text-gray-700">
+                      In Stock
+                    </label>
+                  </div>
+                </div>
 
               {/* Quantity Field */}
               <div className="col-span-2">
@@ -584,211 +584,211 @@ export default function AddProductPage() {
                   {productData.inStock ? 'Enter the available stock quantity' : 'Enable "In Stock" to set quantity'}
                 </p>
               </div>
-            </div>
-          </div>
-          
-          {/* Description & Content */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-medium mb-4">Description & Content</h2>
-            
-            <div className="space-y-6">
-              {/* Short Description */}
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                  Short Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={productData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Brief description of the product"
-                  required
-                ></textarea>
-              </div>
-              
-              {/* About */}
-              <div>
-                <label htmlFor="about" className="block text-sm font-medium text-gray-700 mb-1">
-                  About This Fragrance <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="about"
-                  name="about"
-                  value={productData.about}
-                  onChange={handleInputChange}
-                  rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Detailed information about the fragrance, notes, etc."
-                  required
-                ></textarea>
-              </div>
-              
-              {/* Disclaimer */}
-              <div>
-                <label htmlFor="disclaimer" className="block text-sm font-medium text-gray-700 mb-1">
-                  Disclaimer <span className="text-gray-500 text-xs font-normal">(Optional)</span>
-                </label>
-                <textarea
-                  id="disclaimer"
-                  name="disclaimer"
-                  value={productData.disclaimer}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Any disclaimers or warnings about the product"
-                ></textarea>
               </div>
             </div>
-          </div>
-          
-          {/* Media Upload */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-medium mb-4">Product Media</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Add images and videos of your product. First media item will be used as the featured image. 
-              You can reorder media using the up and down arrows.
-            </p>
             
-            {/* Media Actions */}
-            <div className="flex flex-wrap gap-4 mb-6">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <FiImage className="mr-2" /> Upload Images
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleImageUpload}
-              />
+            {/* Description & Content */}
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-medium mb-4">Description & Content</h2>
               
-              <button
-                type="button"
-                onClick={() => videoInputRef.current?.click()}
-                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <FiVideo className="mr-2" /> Upload Videos
-              </button>
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                multiple
-                className="hidden"
-                onChange={handleVideoUpload}
-              />
+              <div className="space-y-6">
+                {/* Short Description */}
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Short Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={productData.description}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Brief description of the product"
+                    required
+                  ></textarea>
+                </div>
+                
+                {/* About */}
+                <div>
+                  <label htmlFor="about" className="block text-sm font-medium text-gray-700 mb-1">
+                    About This Fragrance <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="about"
+                    name="about"
+                    value={productData.about}
+                    onChange={handleInputChange}
+                    rows={5}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Detailed information about the fragrance, notes, etc."
+                    required
+                  ></textarea>
+                </div>
+                
+                {/* Disclaimer */}
+                <div>
+                  <label htmlFor="disclaimer" className="block text-sm font-medium text-gray-700 mb-1">
+                    Disclaimer <span className="text-gray-500 text-xs font-normal">(Optional)</span>
+                  </label>
+                  <textarea
+                    id="disclaimer"
+                    name="disclaimer"
+                    value={productData.disclaimer}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Any disclaimers or warnings about the product"
+                  ></textarea>
+                </div>
+              </div>
             </div>
             
-            {/* Media Preview */}
-            {productData.media.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {productData.media.map((media, index) => (
-                  <div key={media.id} className="relative border border-gray-200 rounded-md overflow-hidden">
-                    {media.type === 'image' ? (
-                      <img src={media.preview} alt="Product" className="w-full h-32 object-cover" />
-                    ) : (
-                      <video src={media.preview} className="w-full h-32 object-cover" />
-                    )}
-                    
-                    {/* Order indicator */}
-                    <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
-                      {index + 1}
-                    </div>
-                    
-                    {/* Controls */}
-                    <div className="absolute top-2 right-2 flex space-x-1">
-                      <button 
-                        type="button" 
-                        onClick={() => handleDeleteMedia(media.id)} 
-                        className="bg-red-500 p-1 rounded-full text-white hover:bg-red-600"
-                        title="Delete"
-                      >
-                        <FiX size={14} />
-                      </button>
-                    </div>
-                    
-                    {/* Reorder controls */}
-                    <div className="absolute bottom-2 right-2 flex flex-col space-y-1">
-                      <button 
-                        type="button" 
-                        onClick={() => handleMoveUp(index)} 
-                        disabled={index === 0}
-                        className={`bg-gray-800 p-1 rounded-full text-white 
-                          ${index === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-900'}`}
-                        title="Move up"
-                      >
-                        <FiArrowUp size={14} />
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={() => handleMoveDown(index)} 
-                        disabled={index === productData.media.length - 1}
-                        className={`bg-gray-800 p-1 rounded-full text-white 
-                          ${index === productData.media.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-900'}`}
-                        title="Move down"
-                      >
-                        <FiArrowDown size={14} />
-                      </button>
-                    </div>
-                    
-                    {/* Media type indicator */}
-                    <div className="absolute bottom-2 left-2">
-                      {media.type === 'image' ? 
-                        <FiImage className="text-white drop-shadow-lg" /> : 
-                        <FiVideo className="text-white drop-shadow-lg" />
-                      }
-                    </div>
-                  </div>
-                ))}
+            {/* Media Upload */}
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-medium mb-4">Product Media</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Add images and videos of your product. First media item will be used as the featured image. 
+                You can reorder media using the up and down arrows.
+              </p>
+              
+              {/* Media Actions */}
+              <div className="flex flex-wrap gap-4 mb-6">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <FiImage className="mr-2" /> Upload Images
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                
+                <button
+                  type="button"
+                  onClick={() => videoInputRef.current?.click()}
+                  className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <FiVideo className="mr-2" /> Upload Videos
+                </button>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleVideoUpload}
+                />
               </div>
-            ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-md p-12 text-center">
-                <FiImage className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-500">No media uploaded yet</p>
-                <p className="text-xs text-gray-400">Upload images and videos to showcase your product</p>
-              </div>
-            )}
-          </div>
-          
-          {/* Form Actions */}
-          <div className="p-6 bg-gray-50 flex justify-end">
-            <button
-              type="button"
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mr-3"
-              onClick={() => router.push('/admin/products')}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </span>
+              
+              {/* Media Preview */}
+              {productData.media.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {productData.media.map((media, index) => (
+                    <div key={media.id} className="relative border border-gray-200 rounded-md overflow-hidden">
+                      {media.type === 'image' ? (
+                        <img src={media.preview} alt="Product" className="w-full h-32 object-cover" />
+                      ) : (
+                        <video src={media.preview} className="w-full h-32 object-cover" />
+                      )}
+                      
+                      {/* Order indicator */}
+                      <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                        {index + 1}
+                      </div>
+                      
+                      {/* Controls */}
+                      <div className="absolute top-2 right-2 flex space-x-1">
+                        <button 
+                          type="button" 
+                          onClick={() => handleDeleteMedia(media.id)} 
+                          className="bg-red-500 p-1 rounded-full text-white hover:bg-red-600"
+                          title="Delete"
+                        >
+                          <FiX size={14} />
+                        </button>
+                      </div>
+                      
+                      {/* Reorder controls */}
+                      <div className="absolute bottom-2 right-2 flex flex-col space-y-1">
+                        <button 
+                          type="button" 
+                          onClick={() => handleMoveUp(index)} 
+                          disabled={index === 0}
+                          className={`bg-gray-800 p-1 rounded-full text-white 
+                            ${index === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-900'}`}
+                          title="Move up"
+                        >
+                          <FiArrowUp size={14} />
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => handleMoveDown(index)} 
+                          disabled={index === productData.media.length - 1}
+                          className={`bg-gray-800 p-1 rounded-full text-white 
+                            ${index === productData.media.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-900'}`}
+                          title="Move down"
+                        >
+                          <FiArrowDown size={14} />
+                        </button>
+                      </div>
+                      
+                      {/* Media type indicator */}
+                      <div className="absolute bottom-2 left-2">
+                        {media.type === 'image' ? 
+                          <FiImage className="text-white drop-shadow-lg" /> : 
+                          <FiVideo className="text-white drop-shadow-lg" />
+                        }
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <span className="flex items-center">
-                  <FiSave className="mr-2" /> Save Product
-                </span>
+                <div className="border-2 border-dashed border-gray-300 rounded-md p-12 text-center">
+                  <FiImage className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">No media uploaded yet</p>
+                  <p className="text-xs text-gray-400">Upload images and videos to showcase your product</p>
+                </div>
               )}
-            </button>
-          </div>
-        </form>
-      </div>
+            </div>
+            
+            {/* Form Actions */}
+            <div className="p-6 bg-gray-50 flex justify-end">
+              <button
+                type="button"
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mr-3"
+                onClick={() => router.push('/admin/products')}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <FiSave className="mr-2" /> Save Product
+                  </span>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
     </AdminLayout>
   );
 } 

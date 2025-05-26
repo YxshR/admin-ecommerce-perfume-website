@@ -75,9 +75,9 @@ export default function SystemSettingsPage() {
   const productCardStyles = ['minimal', 'bordered', 'shadowed', 'elegant'];
   
   useEffect(() => {
-    // Load saved theme settings
-    loadSettings();
-    setLoading(false);
+      // Load saved theme settings
+      loadSettings();
+      setLoading(false);
   }, []);
   
   // Load settings from localStorage (in a real app, this would be from your API)
@@ -248,52 +248,52 @@ export default function SystemSettingsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
         <p className="text-gray-600">Customize your store's theme and appearance</p>
-      </div>
-      
-      {/* Success/Error Messages */}
-      {saveSuccess && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+        </div>
+        
+        {/* Success/Error Messages */}
+        {saveSuccess && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
           Theme settings saved successfully!
-        </div>
-      )}
-      
-      {saveError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-          {saveError}
-        </div>
-      )}
-      
-      {/* Color Settings */}
+          </div>
+        )}
+        
+        {saveError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {saveError}
+          </div>
+        )}
+          
+          {/* Color Settings */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-lg font-medium mb-4">Color Scheme</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {Object.entries(colors).map(([key, value]) => (
             <div key={key}>
               <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1 capitalize">
                 {key.replace(/([A-Z])/g, ' $1').trim()}
-              </label>
-              <div className="flex">
-                <input
-                  type="color"
+                </label>
+                <div className="flex">
+                  <input
+                    type="color"
                   id={key}
                   name={key}
                   value={value}
-                  onChange={handleColorChange}
+                    onChange={handleColorChange}
                   className="h-10 w-10 border border-gray-300 rounded mr-2"
-                />
-                <input
-                  type="text"
+                  />
+                  <input
+                    type="text"
                   value={value}
-                  onChange={handleColorChange}
+                    onChange={handleColorChange}
                   name={key}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
           ))}
-        </div>
-      </div>
-      
+                </div>
+              </div>
+              
       {/* Font Settings */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-lg font-medium mb-4">Typography</h2>
@@ -302,87 +302,87 @@ export default function SystemSettingsPage() {
             <div key={key}>
               <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-1 capitalize">
                 {key} Font
-              </label>
-              <select
+                </label>
+                <select
                 id={key}
                 name={key}
                 value={value}
-                onChange={handleFontChange}
+                  onChange={handleFontChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {fontOptions.map(font => (
+                >
+                  {fontOptions.map(font => (
                   <option key={font} value={font}>{font}</option>
-                ))}
-              </select>
+                  ))}
+                </select>
             </div>
           ))}
-        </div>
-      </div>
-      
-      {/* Button Styles */}
+            </div>
+          </div>
+          
+          {/* Button Styles */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-lg font-medium mb-4">Button Styles</h2>
-        <div className="space-y-4">
-          <div>
+            <div className="space-y-4">
+              <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Corner Radius</p>
-            <div className="flex space-x-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  checked={buttonStyles.roundedNone}
-                  onChange={() => handleButtonStyleChange('roundedNone')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">Square</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  checked={buttonStyles.roundedMd}
-                  onChange={() => handleButtonStyleChange('roundedMd')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">Rounded</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  checked={buttonStyles.roundedFull}
-                  onChange={() => handleButtonStyleChange('roundedFull')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">Pill</span>
-              </label>
-            </div>
-          </div>
-          
-          <div>
+                <div className="flex space-x-4">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      checked={buttonStyles.roundedNone}
+                      onChange={() => handleButtonStyleChange('roundedNone')}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Square</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      checked={buttonStyles.roundedMd}
+                      onChange={() => handleButtonStyleChange('roundedMd')}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Rounded</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      checked={buttonStyles.roundedFull}
+                      onChange={() => handleButtonStyleChange('roundedFull')}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Pill</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Options</p>
             <div className="flex space-x-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="checkbox"
-                  checked={buttonStyles.shadow}
-                  onChange={() => handleButtonStyleChange('shadow')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={buttonStyles.shadow}
+                      onChange={() => handleButtonStyleChange('shadow')}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
                 <span className="ml-2 text-sm text-gray-700">Drop Shadow</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="checkbox"
-                  checked={buttonStyles.uppercase}
-                  onChange={() => handleButtonStyleChange('uppercase')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Uppercase Text</span>
-              </label>
-            </div>
-          </div>
-          
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={buttonStyles.uppercase}
+                      onChange={() => handleButtonStyleChange('uppercase')}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Uppercase Text</span>
+                  </label>
+                </div>
+              </div>
+              
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Preview</p>
-            <button
+                  <button 
               className={`px-4 py-2 bg-${colors.primary} text-${colors.buttonText} 
                 ${buttonStyles.roundedFull ? 'rounded-full' : ''} 
                 ${buttonStyles.roundedMd ? 'rounded-md' : ''}
@@ -393,88 +393,88 @@ export default function SystemSettingsPage() {
               style={{ backgroundColor: colors.primary, color: colors.buttonText }}
             >
               Button Preview
-            </button>
+                  </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Other Settings */}
+          
+          {/* Other Settings */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-lg font-medium mb-4">Additional Settings</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                name="showAnnouncementBar"
-                checked={otherSettings.showAnnouncementBar}
-                onChange={handleOtherSettingChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    name="showAnnouncementBar"
+                    checked={otherSettings.showAnnouncementBar}
+                    onChange={handleOtherSettingChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
               <span className="ml-2 text-sm text-gray-700">Show Announcement Bar</span>
-            </label>
-          </div>
-          
-          <div>
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                name="enableDarkMode"
-                checked={otherSettings.enableDarkMode}
-                onChange={handleOtherSettingChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
+                </label>
+              </div>
+              
+              <div>
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    name="enableDarkMode"
+                    checked={otherSettings.enableDarkMode}
+                    onChange={handleOtherSettingChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
               <span className="ml-2 text-sm text-gray-700">Enable Dark Mode Option</span>
-            </label>
-          </div>
-          
-          <div>
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                name="useAnimations"
-                checked={otherSettings.useAnimations}
-                onChange={handleOtherSettingChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
+                </label>
+              </div>
+              
+              <div>
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    name="useAnimations"
+                    checked={otherSettings.useAnimations}
+                    onChange={handleOtherSettingChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
               <span className="ml-2 text-sm text-gray-700">Use Animations</span>
-            </label>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Product Card Style
-            </label>
-            <select
-              name="productCardsStyle"
-              value={otherSettings.productCardsStyle}
-              onChange={handleOtherSettingChange}
+                </label>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Card Style
+                </label>
+                <select
+                  name="productCardsStyle"
+                  value={otherSettings.productCardsStyle}
+                  onChange={handleOtherSettingChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {productCardStyles.map(style => (
                 <option key={style} value={style}>{style.charAt(0).toUpperCase() + style.slice(1)}</option>
               ))}
-            </select>
+                </select>
+            </div>
           </div>
         </div>
-      </div>
-      
+        
       {/* Action Buttons */}
       <div className="flex justify-between">
-        <button
-          onClick={resetSettings}
+          <button
+            onClick={resetSettings}
           className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          Reset to Defaults
-        </button>
-        
-        <button
-          onClick={saveSettings}
+          >
+            Reset to Defaults
+          </button>
+          
+          <button
+            onClick={saveSettings}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
+          >
           <FiSave className="mr-2 -ml-1 h-5 w-5" />
           Save Settings
-        </button>
+          </button>
       </div>
     </AdminLayout>
   );

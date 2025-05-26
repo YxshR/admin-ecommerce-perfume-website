@@ -242,7 +242,7 @@ export default function AdminLayoutPage() {
   const removeSection = (sectionId: string) => {
     const currentPage = getCurrentPage();
     if (!currentPage) return;
-    
+
     // Filter out the section to be removed
     const updatedSections = currentPage.sections.filter(section => section.id !== sectionId);
     
@@ -267,7 +267,7 @@ export default function AdminLayoutPage() {
     const temp = sections[index];
     sections[index] = sections[index - 1];
     sections[index - 1] = temp;
-    
+
     // Update positions
     const updatedSections = sections.map((section, idx) => ({
       ...section,
@@ -287,7 +287,7 @@ export default function AdminLayoutPage() {
   const moveSectionDown = (index: number) => {
     const currentPage = getCurrentPage();
     if (!currentPage || index >= currentPage.sections.length - 1) return;
-    
+
     // Create a copy of the sections array
     const sections = [...currentPage.sections];
     
@@ -295,7 +295,7 @@ export default function AdminLayoutPage() {
     const temp = sections[index];
     sections[index] = sections[index + 1];
     sections[index + 1] = temp;
-    
+
     // Update positions
     const updatedSections = sections.map((section, idx) => ({
       ...section,
@@ -382,23 +382,23 @@ export default function AdminLayoutPage() {
           <p className="text-gray-600">Customize the appearance and content of your store pages</p>
         </div>
         <div className="flex space-x-3">
-          <button
+          <button 
             onClick={() => setPreviewMode(!previewMode)}
             className="px-4 py-2 border border-gray-300 rounded-md flex items-center text-gray-700 bg-white hover:bg-gray-50"
           >
             <FiEye className="mr-2" />
             {previewMode ? 'Exit Preview' : 'Preview'}
-          </button>
-          <button
-            onClick={handleSaveLayout}
+            </button>
+            <button
+              onClick={handleSaveLayout}
             className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700"
-          >
+            >
             <FiSave className="mr-2" />
             Save Layout
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
-
+        
       <div className="grid grid-cols-4 gap-6">
         {/* Page Selector Sidebar */}
         <div className="col-span-1 bg-white rounded-lg shadow p-4">
@@ -406,30 +406,30 @@ export default function AdminLayoutPage() {
             <FiLayout className="mr-2" /> Page Templates
           </h2>
           <div className="space-y-2">
-            {availablePages.map(page => (
-              <button
-                key={page.id}
-                onClick={() => handlePageSelect(page.id)}
+                {availablePages.map(page => (
+                  <button
+                    key={page.id}
+                    onClick={() => handlePageSelect(page.id)}
                 className={`w-full text-left px-3 py-2 rounded-md ${
-                  selectedPageId === page.id
-                    ? 'bg-blue-50 text-blue-700 font-medium'
+                      selectedPageId === page.id
+                        ? 'bg-blue-50 text-blue-700 font-medium'
                     : 'hover:bg-gray-100'
-                }`}
-              >
-                {page.name}
-              </button>
-            ))}
+                    }`}
+                  >
+                    {page.name}
+                  </button>
+                ))}
+            </div>
           </div>
-        </div>
-
+          
         {/* Layout Editor */}
         <div className="col-span-3 bg-white rounded-lg shadow">
           {!currentPage ? (
             <div className="p-6 text-center text-gray-500">
               Select a page to edit its layout
-            </div>
+                  </div>
           ) : previewMode ? (
-            // Preview Mode
+                    // Preview Mode
             <div className="p-6">
               <div className="mb-4 text-sm text-gray-500">
                 Preview of {currentPage.name} ({currentPage.path})
@@ -437,38 +437,38 @@ export default function AdminLayoutPage() {
               <div className="border border-gray-200 rounded-lg p-4 min-h-[500px] bg-gray-50">
                 {currentPage.sections.map((section, index) => (
                   <div key={section.id} className="mb-8 border-b pb-6">
-                    {section.type === 'banner' && (
-                      <div className="relative">
-                        <img
-                          src={section.content.imageUrl}
-                          alt={section.content.title}
+                            {section.type === 'banner' && (
+                              <div className="relative">
+                                <img 
+                                  src={section.content.imageUrl} 
+                                  alt={section.content.title} 
                           className="w-full h-64 object-cover rounded-lg"
                         />
                         <div className="absolute inset-0 flex flex-col justify-center items-center text-white bg-black bg-opacity-40 rounded-lg">
                           <h2 className="text-3xl font-bold mb-2">{section.content.title}</h2>
                           <p className="text-xl">{section.content.subtitle}</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {section.type === 'product' && (
-                      <div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {section.type === 'product' && (
+                              <div>
                         <h3 className="text-xl font-semibold mb-4">{section.content.title}</h3>
                         <div className="grid grid-cols-4 gap-4">
-                          {availableProducts.slice(0, 4).map(product => (
+                                  {availableProducts.slice(0, 4).map(product => (
                             <div key={product._id} className="border rounded-lg p-3">
-                              <img
+                                      <img 
                                 src={product.images[0]?.url}
-                                alt={product.name}
+                                        alt={product.name}
                                 className="w-full h-32 object-contain mb-2"
                               />
                               <h4 className="font-medium">{product.name}</h4>
                               <p className="text-blue-600">₹{product.price.toFixed(2)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                     
                     {section.type === 'text' && (
                       <div className="prose max-w-none">
@@ -476,30 +476,30 @@ export default function AdminLayoutPage() {
                         <p>{section.content.body}</p>
                       </div>
                     )}
-                    
-                    {section.type === 'video' && (
-                      <div>
+                            
+                            {section.type === 'video' && (
+                              <div>
                         <h3 className="text-xl font-semibold mb-4">{section.content.title}</h3>
                         <div className="relative pt-[56.25%] bg-black rounded-lg overflow-hidden">
-                          <img
-                            src={section.content.thumbnailUrl}
-                            alt="Video thumbnail"
+                                  <img
+                                    src={section.content.thumbnailUrl}
+                                    alt="Video thumbnail"
                             className="absolute inset-0 w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center">
                             <div className="w-16 h-16 bg-white bg-opacity-75 rounded-full flex items-center justify-center">
                               <div className="w-0 h-0 border-t-8 border-b-8 border-l-12 border-transparent border-l-blue-600 ml-1"></div>
-                            </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            // Edit Mode
+                    </div>
+                  ) : (
+                    // Edit Mode
             <div className="p-6">
               <div className="mb-6 flex justify-between items-center">
                 <h2 className="text-lg font-semibold">
@@ -513,7 +513,7 @@ export default function AdminLayoutPage() {
                 </button>
               </div>
               
-              {currentPage.sections.length === 0 ? (
+                      {currentPage.sections.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg">
                   <p className="text-gray-500 mb-4">This page has no sections yet</p>
                   <button
@@ -541,37 +541,37 @@ export default function AdminLayoutPage() {
                         </div>
                         <div className="flex space-x-2">
                           {index > 0 && (
-                            <button
-                              onClick={() => moveSectionUp(index)}
+                                    <button 
+                                      onClick={() => moveSectionUp(index)} 
                               className="p-1 text-gray-500 hover:text-blue-600"
                               title="Move up"
-                            >
-                              ↑
-                            </button>
+                                    >
+                                      ↑
+                                    </button>
                           )}
                           {index < currentPage.sections.length - 1 && (
-                            <button
-                              onClick={() => moveSectionDown(index)}
+                                    <button 
+                                      onClick={() => moveSectionDown(index)} 
                               className="p-1 text-gray-500 hover:text-blue-600"
                               title="Move down"
-                            >
-                              ↓
-                            </button>
+                                    >
+                                      ↓
+                                    </button>
                           )}
-                          <button
-                            onClick={() => editSection(section)}
+                                    <button 
+                                      onClick={() => editSection(section)}
                             className="p-1 text-gray-500 hover:text-blue-600"
                             title="Edit section"
-                          >
+                                    >
                             <FiEdit size={16} />
-                          </button>
-                          <button
-                            onClick={() => removeSection(section.id)}
+                                    </button>
+                                    <button 
+                                      onClick={() => removeSection(section.id)}
                             className="p-1 text-gray-500 hover:text-red-600"
                             title="Remove section"
-                          >
+                                    >
                             <FiX size={16} />
-                          </button>
+                                    </button>
                         </div>
                       </div>
                       
@@ -583,15 +583,15 @@ export default function AdminLayoutPage() {
                                 src={section.content.imageUrl}
                                 alt=""
                                 className="w-full h-full object-cover"
-                              />
-                            </div>
+                            />
+                          </div>
                             <div className="flex-1 min-w-0">
                               <p className="truncate font-medium">{section.content.title}</p>
                               <p className="truncate text-gray-500 text-xs">{section.content.subtitle}</p>
-                            </div>
                           </div>
-                        )}
-                        
+                        </div>
+                      )}
+                      
                         {section.type === 'product' && (
                           <div>
                             <p className="font-medium">{section.content.title}</p>
@@ -619,24 +619,24 @@ export default function AdminLayoutPage() {
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="w-6 h-6 bg-white bg-opacity-75 rounded-full flex items-center justify-center">
                                   <div className="w-0 h-0 border-t-3 border-b-3 border-l-4 border-transparent border-l-blue-600 ml-0.5"></div>
-                                </div>
-                              </div>
-                            </div>
-                            <div>
+                          </div>
+                        </div>
+                          </div>
+                          <div>
                               <p className="truncate font-medium">{section.content.title}</p>
                               <p className="truncate text-gray-500 text-xs">Video content</p>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
+                  </div>
                   ))}
                 </div>
               )}
             </div>
           )}
-        </div>
-      </div>
+                </div>
+              </div>
 
       {/* Section Edit Modal */}
       {showSectionModal && (
@@ -691,8 +691,8 @@ export default function AdminLayoutPage() {
                 </p>
                 
                 <div className="flex justify-end">
-                  <button
-                    onClick={() => {
+                <button
+                  onClick={() => {
                       // For demo purposes, we'll just create a simple content object
                       const demoContent = {
                         title: 'Demo Section Title',
@@ -717,7 +717,7 @@ export default function AdminLayoutPage() {
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
                     Save Section
-                  </button>
+                </button>
                 </div>
               </div>
             </div>
