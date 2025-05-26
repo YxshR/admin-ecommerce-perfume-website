@@ -191,7 +191,7 @@ export default function AdminDashboard() {
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg">
         <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-800">
-          <h2 className="text-xl font-bold text-white">Fraganote Admin</h2>
+          <h2 className="text-xl font-bold text-white">AVIOTOLUXURY Admin</h2>
         </div>
         <nav className="mt-6">
           <Link href="/admin/dashboard" className="block py-3 px-4 text-gray-900 font-medium bg-gray-100 hover:bg-gray-200 border-l-4 border-blue-600">

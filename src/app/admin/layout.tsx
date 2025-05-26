@@ -10,8 +10,8 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Admin Dashboard | Fraganote",
-  description: "Admin dashboard for Fraganote perfume store",
+  title: "Admin Dashboard | AVIOTOLUXURY",
+  description: "Admin dashboard for AVIOTOLUXURY perfume store",
 };
 
 export default function AdminLayout({

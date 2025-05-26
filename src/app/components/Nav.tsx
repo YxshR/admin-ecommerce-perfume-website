@@ -239,8 +239,8 @@ export default function Nav() {
             
             {/* Logo */}
             <div className="w-1/3 flex justify-center">
-              <Link href="/" className="text-2xl font-bold tracking-wider uppercase">
-                FRAGANOTE
+              <Link href="/" className="text-2xl font-bold tracking-tight">
+                AVIOTOLUXURY
               </Link>
             </div>
             
@@ -360,7 +360,7 @@ export default function Nav() {
               <Link 
                 href="/collection" 
                 className={`text-sm font-medium uppercase tracking-wider ${
-                  pathname === '/collection' || pathname.startsWith('/product') 
+                  pathname === '/collection' || (pathname && pathname.startsWith('/product')) 
                     ? 'text-black' 
                     : 'text-gray-600 hover:text-black'
                 }`}
@@ -472,7 +472,7 @@ export default function Nav() {
                   <Link 
                     href="/" 
                     className={`text-sm font-medium uppercase py-2 ${
-                      pathname === '/' || pathname.startsWith('/store-routes') 
+                      pathname === '/' || (pathname && pathname.startsWith('/store-routes')) 
                         ? 'text-black' 
                         : 'text-gray-600'
                     }`}
@@ -485,7 +485,7 @@ export default function Nav() {
                   <Link 
                     href="/collection" 
                     className={`text-sm font-medium uppercase py-2 ${
-                      pathname === '/collection' || pathname.startsWith('/product') 
+                      pathname === '/collection' || (pathname && pathname.startsWith('/product')) 
                         ? 'text-black' 
                         : 'text-gray-600'
                     }`}

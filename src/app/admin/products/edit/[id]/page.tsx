@@ -138,7 +138,7 @@ export default function EditProductPage() {
           inStock: product.quantity > 0,
           quantity: product.quantity || 0,
           sku: product.sku || '',
-          brand: product.brand || 'Fraganote'
+          brand: product.brand || 'AVIOTOLUXURY'
         });
       }
     } catch (error) {
@@ -409,7 +409,7 @@ export default function EditProductPage() {
         isNewProduct: productData.category.includes('New Arrival'),
         quantity: productData.inStock ? productData.quantity : 0,
         sku: productData.sku,
-        brand: productData.brand || 'Fraganote',
+        brand: productData.brand || 'AVIOTOLUXURY',
         gender: productData.gender,
         volume: productData.volume,
         about: productData.about,
@@ -551,7 +551,7 @@ export default function EditProductPage() {
                     value={productData.brand}
                     onChange={handleInputChange}
                     className="w-full p-2 border rounded-md"
-                    placeholder="Fraganote"
+                    placeholder="AVIOTOLUXURY"
                   />
                 </div>
                 

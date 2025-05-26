@@ -75,7 +75,7 @@ export default function ProductDetailPage() {
             price: data.product.price,
             discountedPrice: data.product.comparePrice || 0,
             category: data.product.category,
-            brand: data.product.brand || 'Fraganote',
+            brand: data.product.brand || 'AVIOTOLUXURY',
             images: data.product.images ? 
               data.product.images.map((img: string) => ({ url: img })) : 
               [{ url: data.product.mainImage || 'https://placehold.co/600x800/222/fff?text=Product' }],
@@ -106,7 +106,7 @@ export default function ProductDetailPage() {
           price: 1499,
           discountedPrice: 1299,
           category: 'Woody',
-          brand: 'Fraganote',
+          brand: 'AVIOTOLUXURY',
           stock: 10,
           images: [
             { url: 'https://placehold.co/600x800/222/fff?text=Wild+Escape' },

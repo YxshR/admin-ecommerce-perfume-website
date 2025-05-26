@@ -22,12 +22,10 @@ const nextConfig = {
     GOOGLE_STORAGE_BUCKET_NAME: 'ecommerce-app-444531.appspot.com',
     GOOGLE_STORAGE_PROJECT_ID: 'ecommerce-app-444531',
     MONGODB_URI: 'mongodb+srv://avitoluxury:l2AuSv97J5FW4ZvU@freetester.667mr8b.mongodb.net/ecommerce',
-    JWT_SECRET: 'fraganote_admin_secret_key_2025',
+    JWT_SECRET: 'aviotoluxury_admin_secret_key_2025',
     ADMIN_EMAIL: 'admin@example.com',
     ADMIN_PHONE: '8126518755',
-    CLOUDINARY_API_SECRET: 'YOUR_CLOUDINARY_API_SECRET_HERE', // Replace with your actual API secret
-    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: 'dzzxpyqif',
-    NEXT_PUBLIC_CLOUDINARY_API_KEY: '992368173733427'
+    CLOUDINARY_API_SECRET: 'cloudinary://992368173733427:kQuf9IxR7a503I0y-J_QVzx4RI8@dzzxpyqif' // Replace with your actual API secret
   },
   output: 'standalone',
   // Add experimental features to improve compatibility with Vercel deployments
@@ -36,6 +34,19 @@ const nextConfig = {
     optimizeCss: true,
   },
   serverExternalPackages: [],
+  // Handle Node.js modules in webpack
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Don't resolve 'fs' module on the client to prevent this error
+      config.resolve.fallback = {
+        fs: false,
+        path: false,
+        os: false,
+        crypto: false,
+      };
+    }
+    return config;
+  },
   async redirects() {
     return [
       {

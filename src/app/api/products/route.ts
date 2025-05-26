@@ -56,18 +56,18 @@ export async function POST(request: Request) {
     // Create product with all fields - Fix category to be a string not an ObjectId
     const productData = {
       name: productInfo.name,
-      slug: productInfo.slug,
+      slug: productInfo.slug || productInfo.name.toLowerCase().replace(/\s+/g, '-'),
       description: productInfo.description,
-      price: productInfo.price,
-      comparePrice: productInfo.comparePrice,
+      price: parseFloat(productInfo.price.toString()),
+      comparePrice: productInfo.comparePrice ? parseFloat(productInfo.comparePrice.toString()) : 0,
       images: images,
       mainImage: mainImage,
       category: productInfo.category.join(', '), // Convert array to string with commas
-      brand: productInfo.brand || 'Fraganote',
+      brand: productInfo.brand || 'AVIOTOLUXURY',
       sku: productInfo.sku,
-      quantity: productInfo.quantity || 0,
+      quantity: parseInt(productInfo.quantity.toString() || '0'),
       featured: productInfo.featured || false,
-      isNewProduct: productInfo.new_arrival || false,
+      isNewProduct: productInfo.isNewProduct || false,
       onSale: productInfo.comparePrice && productInfo.comparePrice > productInfo.price,
       attributes: {
         gender: productInfo.gender,

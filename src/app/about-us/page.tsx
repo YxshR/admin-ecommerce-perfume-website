@@ -22,7 +22,7 @@ export default function AboutUsPage() {
         <div className="w-full h-[50vh] bg-gray-100 flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-black to-transparent opacity-70 z-10"></div>
           <img 
-            src="https://placehold.co/1200x600/272420/FFFFFF?text=About+Fraganote" 
+            src="https://placehold.co/1200x600/272420/FFFFFF?text=About+AVIOTOLUXURY" 
             alt="About Us"
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -82,19 +82,19 @@ export default function AboutUsPage() {
                 <div>
                   <h2 className="text-2xl font-bold mb-4">How It All Began</h2>
                   <p className="text-gray-600 mb-4">
-                    Fraganote was born in 2015 when our founder, Rajan Sharma, realized that the Indian fragrance market lacked truly premium, locally-made perfumes that could compete with international brands.
+                    AVIOTOLUXURY was born in 2015 when our founder, Rajan Sharma, realized that the Indian fragrance market lacked truly premium, locally-made perfumes that could compete with international brands.
                   </p>
                   <p className="text-gray-600 mb-4">
                     Driven by his passion for scents and with a background in chemistry, Rajan started experimenting with creating unique fragrances in his Mumbai apartment. What began as a personal project quickly gained attention among friends and family.
                   </p>
                   <p className="text-gray-600">
-                    By 2016, Fraganote launched its first collection of three signature scents, which sold out within weeks. This remarkable response fueled our commitment to crafting exceptional fragrances that celebrate Indian heritage while appealing to global sensibilities.
+                    By 2016, AVIOTOLUXURY launched its first collection of three signature scents, which sold out within weeks. This remarkable response fueled our commitment to crafting exceptional fragrances that celebrate Indian heritage while appealing to global sensibilities.
                   </p>
                 </div>
                 <div>
                   <img 
                     src="https://placehold.co/500x600/272420/FFFFFF?text=Founder" 
-                    alt="Fraganote Founder"
+                    alt="AVIOTOLUXURY Founder"
                     className="w-full h-auto rounded-lg shadow-md"
                   />
                 </div>
@@ -111,7 +111,7 @@ export default function AboutUsPage() {
                     <div className="mb-12 grid grid-cols-9 items-center">
                       <div className="col-span-4 text-right pr-6">
                         <h3 className="font-bold">2015</h3>
-                        <p className="text-gray-600">Fraganote is founded in Mumbai</p>
+                        <p className="text-gray-600">AVIOTOLUXURY is founded in Mumbai</p>
                       </div>
                       <div className="col-span-1 flex justify-center">
                         <div className="w-4 h-4 bg-black rounded-full"></div>
@@ -192,7 +192,7 @@ export default function AboutUsPage() {
                   </div>
                   <div>
                     <p className="text-gray-600 mb-6">
-                      At Fraganote, we believe that a perfume is more than just a scent—it's a journey, a memory, an expression of identity. Our philosophy is built around three core principles that guide every fragrance we create:
+                      At AVIOTOLUXURY, we believe that a perfume is more than just a scent—it's a journey, a memory, an expression of identity. Our philosophy is built around three core principles that guide every fragrance we create:
                     </p>
                     
                     <div className="mb-6">
@@ -277,7 +277,7 @@ export default function AboutUsPage() {
                     "Creating a perfume is like composing music," says Nisha. "Each note plays a specific role, contributing to a harmonious whole that evolves over time and reveals different aspects of its character."
                   </p>
                   <p className="text-gray-600">
-                    Under Nisha's guidance, our team spends months—sometimes years—perfecting each fragrance before it reaches our customers. This dedication to craftsmanship is evident in every Fraganote perfume.
+                    Under Nisha's guidance, our team spends months—sometimes years—perfecting each fragrance before it reaches our customers. This dedication to craftsmanship is evident in every AVIOTOLUXURY perfume.
                   </p>
                 </div>
               </div>
@@ -292,7 +292,7 @@ export default function AboutUsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-12">
                 <div>
                   <p className="text-gray-600 mb-4">
-                    At Fraganote, we believe that luxury and responsibility can—and should—go hand in hand. Our commitment to sustainability shapes every aspect of our business, from ingredient sourcing to packaging design.
+                    At AVIOTOLUXURY, we believe that luxury and responsibility can—and should—go hand in hand. Our commitment to sustainability shapes every aspect of our business, from ingredient sourcing to packaging design.
                   </p>
                   <p className="text-gray-600 mb-4">
                     We recognize that the perfume industry has traditionally had a significant environmental footprint. That's why we've made it our mission to pioneer more sustainable practices while maintaining the exceptional quality our customers expect.
@@ -431,7 +431,7 @@ export default function AboutUsPage() {
                 We're always looking for passionate individuals to join our growing team. If you share our love for fragrances and our commitment to quality and sustainability, we'd love to hear from you.
               </p>
               <p className="text-gray-600 mb-6">
-                Explore current opportunities and discover what it's like to be part of the Fraganote family.
+                Explore current opportunities and discover what it's like to be part of the AVIOTOLUXURY family.
               </p>
               <Link 
                 href="/careers"

@@ -147,7 +147,9 @@ export default function SignupPage() {
       <div className="hidden md:flex md:w-1/2 bg-cover bg-center bg-[url('https://i.pinimg.com/564x/5f/74/9f/5f749f794a61f04c579e225e48e46b80.jpg')]">
         <div className="w-full h-full bg-gradient-to-r from-black via-black/50 to-transparent flex items-center">
           <div className="px-12 md:px-20 lg:px-28">
-            <h1 className="text-4xl lg:text-5xl font-serif font-bold mb-6 text-white">Join Fraganote</h1>
+            <div className="mb-8 text-center">
+              <h1 className="text-4xl lg:text-5xl font-serif font-bold mb-6 text-white">Join AVIOTOLUXURY</h1>
+            </div>
             <p className="text-lg mb-8 max-w-md text-white">Create an account to explore our exclusive collection of premium fragrances.</p>
           </div>
         </div>
@@ -157,7 +159,7 @@ export default function SignupPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-serif font-bold">Create Account</h2>
-            <p className="text-gray-600 mt-2">Join the Fraganote community</p>
+            <p className="text-gray-600 mt-2">Join the AVIOTOLUXURY community</p>
           </div>
           
           {error && (

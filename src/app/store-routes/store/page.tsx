@@ -282,16 +282,17 @@ export default function HomePage() {
       </section>
       
       {/* About Section */}
-      <section className="py-10 px-4 max-w-7xl mx-auto bg-gray-50">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-medium mb-4">About Fraganote</h2>
-          <p className="text-gray-600 mb-6">
-            Fraganote is a premium fragrance brand that offers high-quality perfumes inspired by the world's most iconic scents.
-            Our products are crafted with the finest ingredients to ensure long-lasting wear and exceptional quality.
-          </p>
-          <Link href="/about-us" className="inline-block border border-black px-6 py-2 hover:bg-black hover:text-white transition duration-300">
-            Learn More
-          </Link>
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl md:text-3xl font-medium mb-4">About AVIOTOLUXURY</h2>
+            <p className="text-gray-600 mb-8">
+              AVIOTOLUXURY is a premium fragrance brand that offers high-quality perfumes inspired by the world's most iconic scents.
+            </p>
+            <Link href="/about-us" className="inline-block border border-black px-6 py-2 hover:bg-black hover:text-white transition duration-300">
+              Learn More
+            </Link>
+          </div>
         </div>
       </section>
     </div>

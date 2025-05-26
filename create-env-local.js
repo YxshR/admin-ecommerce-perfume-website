@@ -7,7 +7,7 @@ const envContent = `# MongoDB Connection
 MONGODB_URI=mongodb+srv://avitoluxury:l2AuSv97J5FW4ZvU@freetester.667mr8b.mongodb.net/ecommerce
 
 # JWT Secret for authentication
-JWT_SECRET=fraganote_admin_secret_key_2025
+JWT_SECRET=aviotoluxury_admin_secret_key_2025
 
 # Admin Credentials
 ADMIN_EMAIL=admin@example.com

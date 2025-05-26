@@ -90,14 +90,14 @@ export async function PUT(
     // Create product data with all fields - Fix category to be a string not an ObjectId
     const productData = {
       name: productInfo.name,
-      slug: productInfo.slug,
+      slug: productInfo.slug || productInfo.name.toLowerCase().replace(/\s+/g, '-'),
       description: productInfo.description,
-      price: productInfo.price,
-      comparePrice: productInfo.comparePrice,
+      price: parseFloat(productInfo.price.toString()),
+      comparePrice: productInfo.comparePrice ? parseFloat(productInfo.comparePrice.toString()) : 0,
       images: images,
       mainImage: mainImage,
       category: Array.isArray(productInfo.category) ? productInfo.category.join(', ') : productInfo.category,
-      brand: productInfo.brand || 'Fraganote',
+      brand: productInfo.brand || 'AVIOTOLUXURY',
       sku: productInfo.sku,
       quantity: productInfo.quantity || 0,
       featured: productInfo.featured || false,

@@ -210,10 +210,10 @@ export default function AdminLoginPage() {
         
         // Save admin auth data
         saveAdminAuth(data.token, data.user);
-        
-        // Redirect to admin dashboard
-        router.push('/admin/dashboard');
-      } else {
+          
+          // Redirect to admin dashboard
+          router.push('/admin/dashboard');
+        } else {
         setError(data.error || 'Invalid OTP. Please try again.');
       }
     } catch (err: any) {

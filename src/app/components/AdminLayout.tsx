@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings, FiMail, FiLayout, FiImage } from 'react-icons/fi';
+import { FiBox, FiShoppingBag, FiUsers, FiLogOut, FiSettings, FiMail, FiLayout } from 'react-icons/fi';
 import { useAdminAuth, adminLogout } from '@/app/lib/admin-auth';
 
 interface AdminLayoutProps {
@@ -65,7 +65,12 @@ export default function AdminLayout({ children, activeRoute = '/admin/dashboard'
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg">
         <div className="p-6 bg-gradient-to-r from-blue-700 to-indigo-800">
-          <h2 className="text-xl font-bold text-white">Fraganote Admin</h2>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <FiShoppingBag className="text-indigo-600" />
+            </div>
+            <h2 className="text-xl font-bold text-white">AVIOTOLUXURY Admin</h2>
+          </div>
         </div>
         <nav className="mt-6">
           <Link 
@@ -146,16 +151,6 @@ export default function AdminLayout({ children, activeRoute = '/admin/dashboard'
           >
             <div className="flex items-center">
               <FiSettings className="mr-3" /> System
-            </div>
-          </Link>
-          <Link 
-            href="/admin/cloudinary-test" 
-            className={`block py-3 px-4 text-gray-600 font-medium hover:bg-gray-100 hover:text-gray-900 ${
-              activeRoute === '/admin/cloudinary-test' ? 'bg-gray-100 text-gray-900 border-l-4 border-blue-600' : ''
-            }`}
-          >
-            <div className="flex items-center">
-              <FiImage className="mr-3" /> Cloudinary Test
             </div>
           </Link>
           <button 

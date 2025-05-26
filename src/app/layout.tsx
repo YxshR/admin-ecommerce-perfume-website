@@ -19,8 +19,8 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Fraganote | Premium Fragrances",
-  description: "Discover luxury fragrances and premium perfumes at Fraganote.",
+  title: "AVIOTOLUXURY | Premium Fragrances",
+  description: "Discover luxury fragrances and premium perfumes at AVIOTOLUXURY.",
 };
 
 export default function RootLayout({
