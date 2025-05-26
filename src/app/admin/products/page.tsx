@@ -73,13 +73,20 @@ export default function AdminProducts() {
         return;
       }
 
+      console.log('Fetching products with token:', token ? 'Token exists' : 'No token');
+      
       const response = await fetch('/api/products', {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
+      console.log('API Response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', response.status, errorText);
+        
         // For development purposes, use mock data if API is not available
         console.warn('Using mock data for development');
         useMockProductsData();
@@ -87,6 +94,9 @@ export default function AdminProducts() {
       }
 
       const data = await response.json();
+      console.log('Products data received:', data ? 'Data exists' : 'No data', 
+                 'Products count:', data.products ? data.products.length : 0);
+      
       setProducts(data.products || []);
       setFilteredProducts(data.products || []);
       

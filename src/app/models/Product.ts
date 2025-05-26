@@ -8,6 +8,7 @@ export interface IProductBase {
   price: number;
   comparePrice?: number;
   images: string[];
+  videos?: string[];
   mainImage: string;
   category: string;
   subcategory?: mongoose.Types.ObjectId;
@@ -98,6 +99,10 @@ const ProductSchema = new Schema({
     min: [0, 'Compare price cannot be negative']
   },
   images: {
+    type: [String],
+    default: []
+  },
+  videos: {
     type: [String],
     default: []
   },

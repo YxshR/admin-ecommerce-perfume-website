@@ -115,7 +115,7 @@ function applySecurityHeaders(response: NextResponse) {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "img-src 'self' data: https: blob:; " +
       "font-src 'self' https://fonts.gstatic.com; " +
-      "connect-src 'self' https://storage.googleapis.com https://*.google-analytics.com; " +
+      "connect-src 'self' https://storage.googleapis.com https://*.google-analytics.com http://localhost:* https://localhost:* https://*.mongodb.net; " +
       "frame-src 'self'; " +
       "object-src 'none'; " +
       "base-uri 'self';",
@@ -151,6 +151,6 @@ function applySecurityHeaders(response: NextResponse) {
 export const config = {
   matcher: [
     // Apply to all routes except API routes and static files
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|_next/webpack|favicon.ico).*)',
   ],
 }; 

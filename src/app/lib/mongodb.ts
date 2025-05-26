@@ -43,7 +43,15 @@ async function connectMongoDB(): Promise<typeof mongoose> {
     // Connect to the database
     console.log('Connecting to MongoDB...');
     
-    globalWithMongoose.mongoose.promise = mongoose.connect(MONGODB_URI!, {
+    if (!MONGODB_URI) {
+      console.error('MONGODB_URI is undefined or empty!');
+      throw new Error('MONGODB_URI environment variable is not defined');
+    }
+    
+    console.log('MongoDB URI format check:', 
+      MONGODB_URI.startsWith('mongodb+srv://') ? 'Valid format' : 'Invalid format');
+    
+    globalWithMongoose.mongoose.promise = mongoose.connect(MONGODB_URI, {
       bufferCommands: true,
       // Add any other connection options if needed
       serverSelectionTimeoutMS: 30000, // 30 seconds
@@ -55,6 +63,13 @@ async function connectMongoDB(): Promise<typeof mongoose> {
     })
     .catch((error) => {
       console.error('MongoDB connection error:', error);
+      console.error('Connection error details:', error.message);
+      if (error.name === 'MongoNetworkError') {
+        console.error('Network error - check your connection and MongoDB URI');
+      } else if (error.name === 'MongoServerSelectionError') {
+        console.error('Server selection error - MongoDB server may be down or unreachable');
+      }
+      
       globalWithMongoose.mongoose.promise = null;
       throw error;
     });
@@ -67,6 +82,7 @@ async function connectMongoDB(): Promise<typeof mongoose> {
   } catch (error) {
     // Reset the promise if there's an error
     globalWithMongoose.mongoose.promise = null;
+    console.error('Failed to establish MongoDB connection:', error);
     throw error;
   }
 }

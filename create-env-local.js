@@ -16,6 +16,11 @@ ADMIN_PHONE=8126518755
 # Google Cloud Storage
 GOOGLE_STORAGE_BUCKET_NAME=ecommerce-app-444531.appspot.com
 GOOGLE_STORAGE_PROJECT_ID=ecommerce-app-444531
+
+# Cloudinary configuration
+CLOUDINARY_CLOUD_NAME=dzzxpyqif
+CLOUDINARY_API_KEY=992368173733427
+CLOUDINARY_API_SECRET=kQuf9IxR7a503I0y-J_QVzx4RI8
 `;
 
 // Write to .env.local file

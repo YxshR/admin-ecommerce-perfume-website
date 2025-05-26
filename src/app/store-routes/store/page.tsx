@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ProductCard from '../../components/store/ProductCard';
-import SaleCarousel from '../../components/SaleCarousel';
+import SaleCarousel from '@/app/components/SaleCarousel';
 
 interface Product {
   _id: string;

@@ -15,6 +15,7 @@ interface Product {
   category: string;
   images: { url: string }[];
   rating?: number;
+  mainImage?: string;
 }
 
 interface ProductCardProps {
@@ -25,6 +26,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const { isAuthenticated, user } = useAuth();
   
   // Check if product is in wishlist when component loads
@@ -45,6 +47,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   
   const checkWishlistStatus = async () => {
     try {
+      // Only attempt to fetch wishlist if user is authenticated
+      if (!isAuthenticated) {
+        return;
+      }
+      
       const response = await fetch('/api/wishlist', {
         credentials: 'include',
         headers: {
@@ -53,12 +60,16 @@ export default function ProductCard({ product }: ProductCardProps) {
       });
       
       if (!response.ok) {
+        // Don't throw error for 401 (unauthorized) - this is expected for non-logged in users
+        if (response.status === 401) {
+          return;
+        }
         throw new Error('Failed to fetch wishlist');
       }
       
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.wishlist && Array.isArray(data.wishlist.items)) {
         const isInWishlist = data.wishlist.items.some(
           (item: any) => item.productId === product._id
         );
@@ -66,6 +77,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       }
     } catch (error) {
       console.error('Error checking wishlist status:', error);
+      // Don't show error to user, just silently fail
     }
   };
   
@@ -91,51 +103,67 @@ export default function ProductCard({ product }: ProductCardProps) {
           credentials: 'include'
         });
         
+        // Handle 401 unauthorized separately - user might have been logged out
+        if (response.status === 401) {
+          // Use localStorage as fallback if authentication fails
+          addToLocalStorageCart();
+          return;
+        }
+        
         if (!response.ok) {
           throw new Error('Failed to add to cart');
         }
+        
+        // Successfully added to server-side cart
       } else {
         // Use localStorage for non-authenticated users
-        let cart = [];
-        try {
-          const savedCart = localStorage.getItem('cart');
-          if (savedCart) {
-            cart = JSON.parse(savedCart);
-          }
-        } catch (error) {
-          console.error('Error parsing cart:', error);
-        }
-        
-        // Check if product is already in cart
-        const existingItemIndex = cart.findIndex((item: any) => item.id === product._id);
-        
-        if (existingItemIndex >= 0) {
-          // If product exists, increase quantity
-          cart[existingItemIndex].quantity += 1;
-        } else {
-          // Otherwise add new item
-          cart.push({
-            id: product._id,
-            name: product.name,
-            price: product.discountedPrice > 0 ? product.discountedPrice : product.price,
-            image: product.images[0]?.url || '',
-            quantity: 1
-          });
-        }
-        
-        // Save updated cart
-        localStorage.setItem('cart', JSON.stringify(cart));
-        
-        // Trigger storage event for other components
-        window.dispatchEvent(new Event('storage'));
+        addToLocalStorageCart();
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
+      // Use localStorage as fallback if API call fails
+      addToLocalStorageCart();
     } finally {
       // Show animation and then reset
       setTimeout(() => {
         setIsAddingToCart(false);
       }, 1000);
+    }
+  };
+  
+  // Helper function to add item to localStorage cart
+  const addToLocalStorageCart = () => {
+    try {
+      let cart = [];
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        cart = JSON.parse(savedCart);
+      }
+      
+      // Check if product is already in cart
+      const existingItemIndex = cart.findIndex((item: any) => item.id === product._id);
+      
+      if (existingItemIndex >= 0) {
+        // If product exists, increase quantity
+        cart[existingItemIndex].quantity += 1;
+      } else {
+        // Otherwise add new item
+        cart.push({
+          id: product._id,
+          name: product.name,
+          price: product.discountedPrice > 0 ? product.discountedPrice : product.price,
+          image: getImageUrl(), // Use the same image URL function as in the component
+          quantity: 1
+        });
+      }
+      
+      // Save updated cart
+      localStorage.setItem('cart', JSON.stringify(cart));
+      
+      // Trigger storage event for other components
+      window.dispatchEvent(new Event('storage'));
+    } catch (error) {
+      console.error('Error adding to localStorage cart:', error);
     }
   };
   
@@ -231,6 +259,37 @@ export default function ProductCard({ product }: ProductCardProps) {
     
     return stars;
   };
+
+  // Fallback image URL - use a local image instead of external service
+  const fallbackImageUrl = '/images/placeholder-product.jpg';
+  
+  // Determine the image URL to use
+  const getImageUrl = () => {
+    // First check if there's an image error
+    if (imageError) {
+      return fallbackImageUrl;
+    }
+    
+    // Check if product has images array with valid URL
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      // Handle both object format { url: string } and direct string format
+      if (typeof product.images[0] === 'string') {
+        return product.images[0];
+      } else if (product.images[0]?.url) {
+        return product.images[0].url;
+      }
+    }
+    
+    // Check if product has mainImage as fallback
+    if (product.mainImage) {
+      return product.mainImage;
+    }
+    
+    // Default fallback
+    return fallbackImageUrl;
+  };
+  
+  const imageUrl = getImageUrl();
     
   return (
     <div
@@ -238,79 +297,78 @@ export default function ProductCard({ product }: ProductCardProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`/product/${product._id}`} className="block">
-        {/* On Sale Tag */}
-        {discount > 0 && (
-          <div className="absolute top-3 left-3 sale-tag z-10">
-            On Sale
-          </div>
-        )}
-        
-        {/* Wishlist button */}
-        <button
-          onClick={handleToggleWishlist}
-          className="absolute top-3 right-3 z-10 bg-white p-2 rounded-full shadow-md transition-all hover:scale-110"
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-        >
-          <FiHeart 
-            className={`w-5 h-5 ${isWishlisted ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
-          />
-        </button>
-        
-        {/* Product Image */}
-        <div className="relative h-64 md:h-80 overflow-hidden">
-          <Image
-            src={product.images[0]?.url || '/placeholder-image.jpg'}
-            alt={product.name}
-            width={400}
-            height={500}
-            className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
-          />
+      {/* On Sale Tag */}
+      {discount > 0 && (
+        <div className="absolute top-3 left-3 sale-tag z-10">
+          On Sale
         </div>
-        
-        {/* Product Info */}
-        <div className="p-4 flex-grow flex flex-col">
-          <Link href={`/product/${product._id}`} className="block flex-grow">
-            {/* Category */}
-            <div className="text-xs text-gray-500 uppercase mb-1">
-              {product.category}
-            </div>
-            
-            {/* Title */}
-            <h3 className="text-sm font-medium mb-2 line-clamp-1">
-              {product.name}
-            </h3>
-            
-            {/* Product Type */}
-            <p className="text-xs text-gray-500 mb-2 line-clamp-1">
-              {product.category} | Perfume
-            </p>
-            
-            {/* Price */}
-            <div className="flex items-center justify-center mt-auto mb-3">
-              {product.discountedPrice > 0 ? (
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-black">₹{product.discountedPrice.toFixed(2)}</span>
-                    <span className="text-xs text-gray-500 line-through">MRP ₹{product.price.toFixed(2)}</span>
-                  </div>
-                </div>
-              ) : (
-                <span className="text-sm font-medium text-black">₹{product.price.toFixed(2)}</span>
-              )}
-            </div>
-          </Link>
-          
-          {/* Add to cart button */}
-          <button 
-            onClick={handleAddToCart}
-            disabled={isAddingToCart}
-            className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-black text-white hover:bg-[#333] transition-all duration-300"
-          >
-            <span className="text-xs font-medium uppercase">{isAddingToCart ? 'Added!' : 'Add to Cart'}</span>
-          </button>
-        </div>
+      )}
+      
+      {/* Wishlist button */}
+      <button
+        onClick={handleToggleWishlist}
+        className="absolute top-3 right-3 z-10 bg-white p-2 rounded-full shadow-md transition-all hover:scale-110"
+        aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+      >
+        <FiHeart 
+          className={`w-5 h-5 ${isWishlisted ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
+        />
+      </button>
+      
+      {/* Product Image - Link wrapper */}
+      <Link href={`/product/${product._id}`} className="block relative h-64 md:h-80 overflow-hidden">
+        <Image
+          src={imageUrl}
+          alt={product.name}
+          width={400}
+          height={500}
+          className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
+          onError={() => setImageError(true)}
+        />
       </Link>
+      
+      {/* Product Info */}
+      <div className="p-4 flex-grow flex flex-col">
+        {/* Category */}
+        <div className="text-xs text-gray-500 uppercase mb-1">
+          {product.category}
+        </div>
+        
+        {/* Title - Link wrapper */}
+        <Link href={`/product/${product._id}`} className="block">
+          <h3 className="text-sm font-medium mb-2 line-clamp-1">
+            {product.name}
+          </h3>
+        </Link>
+        
+        {/* Product Type */}
+        <p className="text-xs text-gray-500 mb-2 line-clamp-1">
+          {product.category} | Perfume
+        </p>
+        
+        {/* Price */}
+        <div className="flex items-center justify-center mt-auto mb-3">
+          {product.discountedPrice > 0 ? (
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-black">₹{product.discountedPrice.toFixed(2)}</span>
+                <span className="text-xs text-gray-500 line-through">MRP ₹{product.price.toFixed(2)}</span>
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm font-medium text-black">₹{product.price.toFixed(2)}</span>
+          )}
+        </div>
+        
+        {/* Add to cart button */}
+        <button 
+          onClick={handleAddToCart}
+          disabled={isAddingToCart}
+          className="w-full flex items-center justify-center space-x-2 py-2 px-4 bg-black text-white hover:bg-[#333] transition-all duration-300"
+        >
+          <span className="text-xs font-medium uppercase">{isAddingToCart ? 'Added!' : 'Add to Cart'}</span>
+        </button>
+      </div>
     </div>
   );
 } 

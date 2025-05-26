@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadImage, uploadVideo, deleteFile } from '@/app/lib/cloudinary';
-
-// Define valid resource types
-type ResourceType = 'image' | 'video' | 'raw' | 'auto';
 
 // Maximum file size (5MB for images, 50MB for videos)
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; 
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+
+// Import cloudinary directly in the API route
+const cloudinary = require('cloudinary').v2;
+
+// Configure with hardcoded values
+cloudinary.config({
+  cloud_name: 'dzzxpyqif',
+  api_key: '992368173733427',
+  api_secret: 'kQuf9IxR7a503I0y-J_QVzx4RI8',
+  secure: true
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,15 +21,10 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const resourceTypeInput = formData.get('resourceType') as string;
-    const folder = formData.get('folder') as string || 'perfume_products';
+    const folder = formData.get('folder') as string || 'product_images';
     
     console.log(`File received: ${file?.name}, type: ${file?.type}, size: ${file?.size}`);
-    console.log(`Resource type input: ${resourceTypeInput}`);
-    
-    // Validate resource type
-    const resourceType = resourceTypeInput === 'video' ? 'video' : 'image';
-    
-    console.log(`Using resource type: ${resourceType}`);
+    console.log(`Resource type: ${resourceTypeInput || 'image'}, Folder: ${folder}`);
     
     if (!file) {
       console.error('No file provided in request');
@@ -33,7 +35,9 @@ export async function POST(request: NextRequest) {
     }
     
     // Validate file size
-    const MAX_SIZE = resourceType === 'video' ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    const isVideo = resourceTypeInput === 'video';
+    const MAX_SIZE = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    
     if (file.size > MAX_SIZE) {
       console.error(`File too large: ${file.size} bytes`);
       return NextResponse.json({ 
@@ -49,27 +53,32 @@ export async function POST(request: NextRequest) {
     
     console.log('Starting Cloudinary upload...');
     
-    // Upload to Cloudinary
-    let result;
-    if (resourceType === 'video') {
-      result = await uploadVideo(base64File, folder);
-    } else {
-      result = await uploadImage(base64File, folder);
+    // Upload to Cloudinary directly
+    try {
+      const result = await cloudinary.uploader.upload(base64File, {
+        folder: folder,
+        resource_type: isVideo ? 'video' : 'image'
+      });
+      
+      console.log('Upload completed successfully');
+      console.log('- Public ID:', result.public_id);
+      console.log('- URL:', result.secure_url);
+      
+      // Return success response
+      return NextResponse.json({
+        success: true,
+        public_id: result.public_id,
+        url: result.secure_url || result.url
+      });
+      
+    } catch (uploadError: any) {
+      console.error('Cloudinary upload error:', uploadError);
+      return NextResponse.json({
+        success: false,
+        error: 'Cloudinary upload failed',
+        details: uploadError.message || 'Unknown upload error'
+      }, { status: 500 });
     }
-    
-    console.log('Upload completed successfully');
-    console.log('Cloudinary response:', {
-      public_id: result.public_id,
-      url: result.secure_url || result.url,
-      format: result.format
-    });
-    
-    // Return success response
-    return NextResponse.json({
-      success: true,
-      public_id: result.public_id,
-      url: result.secure_url || result.url
-    });
   } catch (error: any) {
     console.error('Upload route error:', error);
     return NextResponse.json(
@@ -87,6 +96,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const publicId = searchParams.get('publicId');
+    const resourceType = searchParams.get('resourceType') || 'image';
     
     if (!publicId) {
       return NextResponse.json({ 
@@ -95,12 +105,28 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
     
-    console.log(`Deleting file with ID: ${publicId}`);
+    console.log(`Deleting file with ID: ${publicId}, resource type: ${resourceType}`);
     
-    // Delete the file from Cloudinary
-    const result = await deleteFile(publicId);
-    
-    return NextResponse.json({ success: true });
+    // Delete the file from Cloudinary directly
+    try {
+      const result = await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType
+      });
+      
+      console.log('Deletion result:', result);
+      
+      return NextResponse.json({ 
+        success: true,
+        result
+      });
+    } catch (deleteError: any) {
+      console.error('Cloudinary delete error:', deleteError);
+      return NextResponse.json({
+        success: false,
+        error: 'Cloudinary deletion failed',
+        details: deleteError.message || 'Unknown deletion error'
+      }, { status: 500 });
+    }
   } catch (error: any) {
     console.error('Delete route error:', error);
     return NextResponse.json(

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FiShoppingBag, FiHeart, FiStar, FiArrowLeft } from 'react-icons/fi';
+import { FiShoppingBag, FiHeart, FiStar, FiArrowLeft, FiVideo } from 'react-icons/fi';
 import Image from 'next/image';
 
 interface Product {
@@ -15,6 +15,7 @@ interface Product {
   category: string;
   brand: string;
   images: { url: string }[];
+  videos: { url: string }[];
   stock: number;
   fragrance_notes?: {
     top: string[];
@@ -79,6 +80,9 @@ export default function ProductDetailPage() {
             images: data.product.images ? 
               data.product.images.map((img: string) => ({ url: img })) : 
               [{ url: data.product.mainImage || 'https://placehold.co/600x800/222/fff?text=Product' }],
+            videos: data.product.videos ? 
+              data.product.videos.map((vid: string) => ({ url: vid })) : 
+              [],
             stock: data.product.quantity || 0,
             fragrance_notes: {
               top: data.product.attributes?.gender ? [data.product.attributes.gender] : ['Unisex'],
@@ -113,6 +117,7 @@ export default function ProductDetailPage() {
             { url: 'https://placehold.co/600x800/333/fff?text=Product+Side' },
             { url: 'https://placehold.co/600x800/444/fff?text=Product+Back' },
           ],
+          videos: [],
           fragrance_notes: {
             top: ['Bergamot', 'Lemon', 'Green Apple'],
             middle: ['Pine', 'Cedar', 'Lavender'],
@@ -235,7 +240,7 @@ export default function ProductDetailPage() {
   
   // Product image gallery
   const renderImageGallery = () => {
-    if (!product || !product.images || product.images.length === 0) {
+    if (!product || (!product.images || product.images.length === 0) && (!product.videos || product.videos.length === 0)) {
       return (
         <div className="aspect-square bg-gray-100 rounded-lg">
           <Image
@@ -252,19 +257,28 @@ export default function ProductDetailPage() {
     return (
       <div>
         <div className="aspect-square bg-gray-50 rounded-lg mb-2 overflow-hidden">
-          <Image
-            src={product.images[selectedImage]?.url || '/placeholder-image.jpg'}
-            alt={`${product.name} - Image ${selectedImage + 1}`}
-            width={600}
-            height={800}
-            className="w-full h-full object-cover rounded-lg"
-          />
+          {selectedImage < product.images.length ? (
+            <Image
+              src={product.images[selectedImage]?.url || '/placeholder-image.jpg'}
+              alt={`${product.name} - Image ${selectedImage + 1}`}
+              width={600}
+              height={800}
+              className="w-full h-full object-cover rounded-lg"
+            />
+          ) : (
+            <video 
+              src={product.videos[selectedImage - product.images.length]?.url} 
+              controls
+              className="w-full h-full object-cover rounded-lg"
+            />
+          )}
         </div>
         
         <div className="grid grid-cols-4 gap-2">
+          {/* Display image thumbnails */}
           {product.images.map((image, index) => (
             <button
-              key={index}
+              key={`image-${index}`}
               onClick={() => setSelectedImage(index)}
               className={`relative aspect-square rounded-md overflow-hidden border-2 ${
                 selectedImage === index ? 'border-black' : 'border-transparent'
@@ -277,6 +291,21 @@ export default function ProductDetailPage() {
                 height={100}
                 className="w-full h-full object-cover"
               />
+            </button>
+          ))}
+          
+          {/* Display video thumbnails */}
+          {product.videos && product.videos.map((video, index) => (
+            <button
+              key={`video-${index}`}
+              onClick={() => setSelectedImage(product.images.length + index)}
+              className={`relative aspect-square rounded-md overflow-hidden border-2 ${
+                selectedImage === product.images.length + index ? 'border-black' : 'border-transparent'
+              }`}
+            >
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <FiVideo size={24} className="text-gray-600" />
+              </div>
             </button>
           ))}
         </div>

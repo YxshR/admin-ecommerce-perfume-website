@@ -27,6 +27,7 @@ interface ProductDocument {
   name: string;
   price: number;
   images: { url: string }[];
+  mainImage?: string;
 }
 
 // Helper function to extract user ID from cookies
@@ -53,34 +54,211 @@ const createNoCacheHeaders = () => {
   };
 };
 
+// Helper function to get the best available product image URL
+const getProductImageUrl = (product: any) => {
+  // Get the best available image URL
+  let imageUrl = '';
+  if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+    if (typeof product.images[0] === 'string') {
+      imageUrl = product.images[0];
+    } else if (product.images[0]?.url) {
+      imageUrl = product.images[0].url;
+    }
+  }
+  // Fallback to mainImage if available
+  if (!imageUrl && product.mainImage) {
+    imageUrl = product.mainImage;
+  }
+  
+  return imageUrl || '/images/placeholder-product.jpg';
+};
+
 // GET endpoint to fetch user's cart
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // In a real app, you would fetch cart data from a database
-    // For now, return a simple response
-    return NextResponse.json({ success: true, message: 'Cart API is working' }, { status: 200 });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 });
+    // Get user ID from cookies
+    const cookie = request.headers.get('cookie') || '';
+    const isLoggedIn = cookie.includes('isLoggedIn=true');
+    
+    if (!isLoggedIn) {
+      // For non-authenticated users, return an empty cart structure
+      // The client will use localStorage for cart management
+      return NextResponse.json({ 
+        success: true, 
+        cart: {
+          items: [],
+          subtotal: 0
+        }
+      }, { 
+        status: 200,
+        headers: createNoCacheHeaders()
+      });
+    }
+    
+    const userId = getUserIdFromCookies(cookie);
+    if (!userId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User data not found' 
+      }, { status: 401 });
+    }
+    
+    // Connect to MongoDB
+    await connectMongoDB();
+    
+    // Find user's cart
+    let cart = await Cart.findOne({ user: userId }) as CartDocument;
+    
+    // If no cart exists, create an empty one
+    if (!cart) {
+      cart = new Cart({
+        user: userId,
+        items: [],
+        subtotal: 0
+      });
+      await cart.save();
+    }
+    
+    // Return cart data
+    return NextResponse.json({
+      success: true,
+      cart: {
+        items: cart.items.map((item: CartItem) => ({
+          id: item.product.toString(),
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity
+        })),
+        subtotal: cart.subtotal
+      }
+    }, {
+      headers: createNoCacheHeaders()
+    });
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Server error',
+      cart: {
+        items: [],
+        subtotal: 0
+      }
+    }, { 
+      status: 500,
+      headers: createNoCacheHeaders()
+    });
   }
 }
 
 // POST endpoint to add/update cart items
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    // Get user ID from cookies
+    const cookie = request.headers.get('cookie') || '';
+    const isLoggedIn = cookie.includes('isLoggedIn=true');
     
-    // In a real app, you would add the item to the cart in a database
-    // For now, just return the data that was sent
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Item added to cart',
-      item: data
-    }, { status: 201 });
-  } catch (err) {
+    if (!isLoggedIn) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Unauthorized - Please log in' 
+      }, { status: 401 });
+    }
+    
+    const userId = getUserIdFromCookies(cookie);
+    if (!userId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User data not found' 
+      }, { status: 401 });
+    }
+    
+    // Parse request body
+    const { productId, quantity } = await request.json();
+    
+    if (!productId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Product ID is required' 
+      }, { status: 400 });
+    }
+    
+    // Connect to MongoDB
+    await connectMongoDB();
+    
+    // Find product
+    const product = await Product.findById(productId) as ProductDocument;
+    if (!product) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Product not found' 
+      }, { status: 404 });
+    }
+    
+    // Find or create user's cart
+    let cart = await Cart.findOne({ user: userId }) as CartDocument;
+    
+    if (!cart) {
+      cart = new Cart({
+        user: userId,
+        items: [],
+        subtotal: 0
+      });
+    }
+    
+    // Check if product already exists in cart
+    const existingItemIndex = cart.items.findIndex(
+      (item: CartItem) => item.product.toString() === productId
+    );
+    
+    if (existingItemIndex >= 0) {
+      // Update quantity if product exists
+      cart.items[existingItemIndex].quantity = quantity || cart.items[existingItemIndex].quantity + 1;
+    } else {
+      // Add new item if product doesn't exist
+      cart.items.push({
+        product: productId,
+        quantity: quantity || 1,
+        price: product.price,
+        name: product.name,
+        image: getProductImageUrl(product)
+      });
+    }
+    
+    // Calculate subtotal
+    cart.subtotal = cart.items.reduce(
+      (sum: number, item: CartItem) => sum + (item.price * item.quantity),
+      0
+    );
+    
+    // Save cart
+    await cart.save();
+    
+    // Return updated cart
+    return NextResponse.json({
+      success: true,
+      cart: {
+        items: cart.items.map((item: CartItem) => ({
+          id: item.product.toString(),
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          quantity: item.quantity
+        })),
+        subtotal: cart.subtotal
+      }
+    }, {
+      headers: createNoCacheHeaders()
+    });
+  } catch (error) {
+    console.error('Error adding item to cart:', error);
     return NextResponse.json({ 
       success: false, 
-      error: err instanceof Error ? err.message : 'Server error'
-    }, { status: 500 });
+      error: 'Server error' 
+    }, { 
+      status: 500,
+      headers: createNoCacheHeaders()
+    });
   }
 }
 
@@ -229,7 +407,7 @@ export async function PUT(request: Request) {
         quantity: item.quantity,
         price: product.price,
         name: product.name,
-        image: product.images[0]?.url || ''
+        image: getProductImageUrl(product)
       });
     }
     

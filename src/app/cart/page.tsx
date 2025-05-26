@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FiTrash2, FiShoppingBag, FiPlus, FiMinus } from 'react-icons/fi';
 import { useAuth } from '../components/AuthProvider';
 
@@ -54,10 +55,13 @@ export default function CartPage() {
       
       const data = await response.json();
       
-      if (data.success) {
-        setCartItems(data.cart.items);
-        setSubtotal(data.cart.subtotal);
+      if (data.success && data.cart) {
+        // Ensure items exists and is an array
+        const items = Array.isArray(data.cart.items) ? data.cart.items : [];
+        setCartItems(items);
+        setSubtotal(data.cart.subtotal || 0);
       } else {
+        // If no cart data or items are undefined, set empty array
         setCartItems([]);
         setSubtotal(0);
       }
@@ -213,11 +217,17 @@ export default function CartPage() {
                       <tr key={item.id}>
                         <td className="py-4 px-6">
                           <div className="flex items-center">
-                            <div className="w-16 h-16 flex-shrink-0 overflow-hidden border">
-                              <img 
-                                src={item.image || 'https://placehold.co/200x200'} 
+                            <div className="w-16 h-16 flex-shrink-0 overflow-hidden border relative">
+                              <Image 
+                                src={item.image || '/images/placeholder-product.jpg'} 
                                 alt={item.name} 
-                                className="w-full h-full object-cover"
+                                width={64}
+                                height={64}
+                                className="object-cover"
+                                onError={(e) => {
+                                  // @ts-ignore - fallback to placeholder on error
+                                  e.target.src = '/images/placeholder-product.jpg';
+                                }}
                               />
                             </div>
                             <div className="ml-4">

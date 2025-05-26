@@ -202,9 +202,9 @@ export default function AdminLoginPage() {
         cache: 'no-store'
       });
       
-      const data = await res.json();
-      
-      if (data.success && data.token) {
+        const data = await res.json();
+        
+        if (data.success && data.token) {
         // Import and use the new admin auth utility
         const { saveAdminAuth } = await import('@/app/lib/admin-auth');
         

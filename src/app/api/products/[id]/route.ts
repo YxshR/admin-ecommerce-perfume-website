@@ -35,7 +35,9 @@ export async function GET(
 ) {
   try {
     await connectMongo();
-    const product = await Product.findById(params.id);
+    // Ensure params is properly awaited
+    const id = params.id;
+    const product = await Product.findById(id);
 
     if (!product) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
@@ -55,6 +57,8 @@ export async function PUT(
 ) {
   try {
     await connectMongo();
+    // Ensure params is properly awaited
+    const id = params.id;
     
     // Handle multipart form data
     const formData = await request.formData();
@@ -111,10 +115,10 @@ export async function PUT(
       }
     };
     
-    console.log('Updating product:', params.id);
+    console.log('Updating product:', id);
     
     const product = await Product.findByIdAndUpdate(
-      params.id,
+      id,
       productData,
       { new: true, runValidators: true }
     );
@@ -141,13 +145,15 @@ export async function DELETE(
 ) {
   try {
     await connectMongo();
-    const product = await Product.findByIdAndDelete(params.id);
+    // Ensure params is properly awaited
+    const id = params.id;
+    const product = await Product.findByIdAndDelete(id);
 
     if (!product) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
 
-    console.log('Product deleted successfully:', params.id);
+    console.log('Product deleted successfully:', id);
     return NextResponse.json({ success: true, message: 'Product deleted successfully' }, { status: 200 });
   } catch (error) {
     console.error('Error deleting product:', error);

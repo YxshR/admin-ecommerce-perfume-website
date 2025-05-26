@@ -130,37 +130,60 @@ export default function AddProductPage() {
     setSaveError('');
     
     try {
+      // Check if we already have 6 images
+      const currentImages = productData.media.filter(m => m.type === 'image');
+      if (currentImages.length >= 6) {
+        throw new Error('Maximum 6 images allowed per product');
+      }
+      
       const file = e.target.files[0];
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder', 'product_images');
       
-      // Upload to Google Cloud Storage via our API
+      console.log('Uploading image:', file.name);
+      
+      // Upload to Cloudinary via our API
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
       
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      
       const data = await response.json();
       
+      if (!response.ok) {
+        console.error('Upload failed with status:', response.status);
+        console.error('Error details:', data);
+        throw new Error(data.error || data.details || 'Upload failed');
+      }
+      
       if (data.success) {
+        console.log('Upload successful:', data);
+        
         // Add the uploaded image to the list
-      setProductData(prev => ({
-        ...prev,
-          media: [...prev.media, { type: 'image', url: data.url, id: data.public_id }]
-        }));
+        setProductData(prev => {
+          return {
+            ...prev,
+            media: [...prev.media, { 
+              id: data.public_id, 
+              type: 'image', 
+              url: data.url,
+              preview: data.url
+            }]
+          };
+        });
       } else {
         throw new Error(data.error || 'Failed to upload image');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      setSaveError('Failed to upload image. Please try again.');
+      setSaveError(error instanceof Error ? error.message : 'Failed to upload image. Please try again.');
     } finally {
       setIsSaving(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
   
@@ -172,38 +195,61 @@ export default function AddProductPage() {
     setSaveError('');
     
     try {
+      // Check if we already have 2 videos
+      const currentVideos = productData.media.filter(m => m.type === 'video');
+      if (currentVideos.length >= 2) {
+        throw new Error('Maximum 2 videos allowed per product');
+      }
+      
       const file = e.target.files[0];
       const formData = new FormData();
       formData.append('file', file);
       formData.append('resourceType', 'video');
       formData.append('folder', 'product_videos');
       
-      // Upload to Google Cloud Storage via our API
+      console.log('Uploading video:', file.name);
+      
+      // Upload to Cloudinary via our API
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
       
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      
       const data = await response.json();
       
+      if (!response.ok) {
+        console.error('Upload failed with status:', response.status);
+        console.error('Error details:', data);
+        throw new Error(data.error || data.details || 'Upload failed');
+      }
+      
       if (data.success) {
+        console.log('Upload successful:', data);
+        
         // Add the uploaded video to the list
-      setProductData(prev => ({
-        ...prev,
-          media: [...prev.media, { type: 'video', url: data.url, id: data.public_id }]
-        }));
+        setProductData(prev => {
+          return {
+            ...prev,
+            media: [...prev.media, { 
+              id: data.public_id, 
+              type: 'video', 
+              url: data.url,
+              preview: data.url
+            }]
+          };
+        });
       } else {
         throw new Error(data.error || 'Failed to upload video');
       }
     } catch (error) {
       console.error('Error uploading video:', error);
-      setSaveError('Failed to upload video. Please try again.');
+      setSaveError(error instanceof Error ? error.message : 'Failed to upload video. Please try again.');
     } finally {
       setIsSaving(false);
+      // Reset the file input
+      if (videoInputRef.current) {
+        videoInputRef.current.value = '';
+      }
     }
   };
   
@@ -213,18 +259,18 @@ export default function AddProductPage() {
     const mediaItem = productData.media.find(item => item.id === id);
     
     if (mediaItem) {
-      // If the URL is from Google Cloud Storage, delete it from the server
-      if (mediaItem.url.includes('storage.googleapis.com')) {
+      // If the URL is from Cloudinary, delete it from the server
+      if (mediaItem.url.includes('res.cloudinary.com')) {
         try {
-          const response = await fetch(`/api/upload?fileId=${encodeURIComponent(id)}`, {
+          const response = await fetch(`/api/upload?publicId=${encodeURIComponent(id)}&resourceType=${mediaItem.type}`, {
             method: 'DELETE',
           });
           
           if (!response.ok) {
-            console.error('Failed to delete media from storage');
+            console.error('Failed to delete media from Cloudinary');
           }
         } catch (error) {
-          console.error('Error deleting media from storage:', error);
+          console.error('Error deleting media from Cloudinary:', error);
         }
       }
     }
@@ -277,7 +323,10 @@ export default function AddProductPage() {
     if (!productData.gender) return 'Please select a gender';
     if (!productData.volume) return 'Please select product volume';
     if (productData.price <= 0) return 'Price must be greater than 0';
-    if (productData.media.length === 0) return 'Please add at least one image';
+    
+    // Check if at least one image is uploaded
+    const hasImages = productData.media.some(m => m.type === 'image');
+    if (!hasImages) return 'Please add at least one image';
     
     return '';
   };
@@ -322,18 +371,12 @@ export default function AddProductPage() {
         in_stock: productData.inStock,
         quantity: productData.quantity,
         slug: productData.name.toLowerCase().replace(/\s+/g, '-'), // Generate slug from name
-        sku: `SKU-${Date.now().toString().slice(-8)}` // Generate a unique SKU
+        sku: `SKU-${Date.now().toString().slice(-8)}`, // Generate a unique SKU
+        media: productData.media // Include all media items
       };
       
       // Add product info as JSON
       formData.append('productInfo', JSON.stringify(productInfo));
-      
-      // Add media files
-      productData.media.forEach((media, index) => {
-        if (media.file) {
-          formData.append(`media_${index}`, media.file);
-        }
-      });
       
       // Set mainImage to the first image if available
       const firstImage = productData.media.find(m => m.type === 'image');

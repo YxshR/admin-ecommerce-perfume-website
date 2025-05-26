@@ -1,5 +1,3 @@
-'use client';
-
 // Import cloudinary only on the server side
 let cloudinary: any;
 
@@ -9,13 +7,15 @@ if (typeof window === 'undefined') {
   const { v2 } = require('cloudinary');
   cloudinary = v2;
   
-  // Configure Cloudinary on server
+  // Configure Cloudinary on server with hardcoded values for simplicity
   cloudinary.config({
     cloud_name: 'dzzxpyqif',
     api_key: '992368173733427',
     api_secret: 'kQuf9IxR7a503I0y-J_QVzx4RI8',
     secure: true
   });
+  
+  console.log('Cloudinary configured with hardcoded values');
 }
 
 /**
@@ -27,20 +27,20 @@ if (typeof window === 'undefined') {
  */
 export const uploadImage = async (
   file: string,
-  folder: string = 'perfume_products'
+  folder: string = 'product_images'
 ) => {
   try {
     if (typeof window !== 'undefined') {
       throw new Error('Image upload can only be performed on the server');
     }
     
+    console.log('Uploading image to Cloudinary...');
+    
     const result = await cloudinary.uploader.upload(file, {
-      folder,
-      resource_type: 'image',
-      quality: 'auto',
-      format: 'auto',
+      folder: folder
     });
     
+    console.log('Cloudinary upload successful:', result.public_id);
     return result;
   } catch (error) {
     console.error('Error uploading image to Cloudinary:', error);
@@ -57,19 +57,21 @@ export const uploadImage = async (
  */
 export const uploadVideo = async (
   file: string,
-  folder: string = 'perfume_videos'
+  folder: string = 'product_videos'
 ) => {
   try {
     if (typeof window !== 'undefined') {
       throw new Error('Video upload can only be performed on the server');
     }
     
+    console.log('Uploading video to Cloudinary...');
+    
     const result = await cloudinary.uploader.upload(file, {
-      folder,
-      resource_type: 'video',
-      quality: 'auto',
+      folder: folder,
+      resource_type: 'video'
     });
     
+    console.log('Cloudinary upload successful:', result.public_id);
     return result;
   } catch (error) {
     console.error('Error uploading video to Cloudinary:', error);
@@ -93,10 +95,13 @@ export const deleteFile = async (
       throw new Error('File deletion can only be performed on the server');
     }
     
+    console.log(`Deleting ${resourceType} from Cloudinary:`, publicId);
+    
     const result = await cloudinary.uploader.destroy(publicId, {
       resource_type: resourceType
     });
     
+    console.log('Cloudinary deletion result:', result);
     return result;
   } catch (error) {
     console.error('Error deleting file from Cloudinary:', error);
