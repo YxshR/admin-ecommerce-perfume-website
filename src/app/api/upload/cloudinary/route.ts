@@ -8,7 +8,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const adminToken = cookieStore.get('admin_token');
     const regularToken = cookieStore.get('token');
     
@@ -33,6 +33,15 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
+    // Check if Cloudinary API secret is configured
+    if (!process.env.CLOUDINARY_API_SECRET) {
+      console.error('Cloudinary API secret is not configured');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Cloudinary configuration error' 
+      }, { status: 500 });
+    }
+    
     // Convert file to base64
     const buffer = await file.arrayBuffer();
     const base64String = Buffer.from(buffer).toString('base64');
@@ -40,6 +49,13 @@ export async function POST(request: NextRequest) {
     
     // Upload to Cloudinary
     const uploadResult = await uploadImage(base64File, folder);
+    
+    if (!uploadResult || !uploadResult.url) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to upload image to Cloudinary' 
+      }, { status: 500 });
+    }
     
     return NextResponse.json({ 
       success: true, 
@@ -49,7 +65,8 @@ export async function POST(request: NextRequest) {
     console.error('Error uploading to Cloudinary:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Server error' 
+      error: error instanceof Error ? error.message : 'Server error',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 });
   }
 }
@@ -57,7 +74,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Check authentication
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const adminToken = cookieStore.get('admin_token');
     const regularToken = cookieStore.get('token');
     
@@ -73,6 +90,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Public ID is required' }, { status: 400 });
     }
     
+    // Check if Cloudinary API secret is configured
+    if (!process.env.CLOUDINARY_API_SECRET) {
+      console.error('Cloudinary API secret is not configured');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Cloudinary configuration error' 
+      }, { status: 500 });
+    }
+    
     // Delete from Cloudinary
     const { deleteImage } = await import('@/app/lib/cloudinary');
     const result = await deleteImage(publicId);
@@ -85,10 +111,13 @@ export async function DELETE(request: NextRequest) {
     console.error('Error deleting from Cloudinary:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Server error' 
+      error: error instanceof Error ? error.message : 'Server error',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
     }, { status: 500 });
   }
 }
+
+export const dynamic = 'force-dynamic';
 
 export const config = {
   api: {

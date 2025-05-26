@@ -11,8 +11,8 @@ if (typeof window === 'undefined') {
   
   // Configure Cloudinary on server
   cloudinary.config({
-    cloud_name: 'dzzxpyqif',
-    api_key: '992368173733427',
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dzzxpyqif',
+    api_key: process.env.CLOUDINARY_API_KEY || '992368173733427',
     api_secret: process.env.CLOUDINARY_API_SECRET || '',
   });
 }
@@ -100,7 +100,7 @@ export const getOptimizedUrl = (
   
   // Client-side implementation that doesn't rely on the cloudinary SDK
   if (typeof window !== 'undefined') {
-    const cloudName = 'dzzxpyqif';
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dzzxpyqif';
     let transformations = '';
     
     if (width) transformations += `w_${width},`;
