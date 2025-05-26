@@ -124,106 +124,86 @@ export default function AddProductPage() {
   
   // Handle image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      // Show loading state
-      setIsSaving(true);
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    setIsSaving(true);
+    setSaveError('');
+    
+    try {
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'product_images');
       
-      try {
-        const uploadedItems: ProductMedia[] = [];
-        
-        for (const file of Array.from(e.target.files)) {
-          // Create a FormData object for each file
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('folder', 'perfume_products');
-          
-          // Upload to Cloudinary via our API
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to upload ${file.name}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.success) {
-            uploadedItems.push({
-              id: data.public_id,
-              type: 'image',
-              url: data.url,
-              preview: data.url
-            });
-          }
-        }
-        
-        // Update product data with new media items
+      // Upload to Google Cloud Storage via our API
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Add the uploaded image to the list
         setProductData(prev => ({
           ...prev,
-          media: [...prev.media, ...uploadedItems]
+          media: [...prev.media, { type: 'image', url: data.url, id: data.public_id }]
         }));
-        
-      } catch (error) {
-        console.error('Error uploading images:', error);
-        setSaveError('Failed to upload images. Please try again.');
-      } finally {
-        setIsSaving(false);
+      } else {
+        throw new Error(data.error || 'Failed to upload image');
       }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setSaveError('Failed to upload image. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
   
   // Handle video upload
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      // Show loading state
-      setIsSaving(true);
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    setIsSaving(true);
+    setSaveError('');
+    
+    try {
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('resourceType', 'video');
+      formData.append('folder', 'product_videos');
       
-      try {
-        const uploadedItems: ProductMedia[] = [];
-        
-        for (const file of Array.from(e.target.files)) {
-          // Create a FormData object for each file
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('folder', 'perfume_videos');
-          formData.append('resourceType', 'video');
-          
-          // Upload to Cloudinary via our API
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to upload ${file.name}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.success) {
-            uploadedItems.push({
-              id: data.public_id,
-              type: 'video',
-              url: data.url,
-              preview: data.url
-            });
-          }
-        }
-        
-        // Update product data with new media items
+      // Upload to Google Cloud Storage via our API
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Add the uploaded video to the list
         setProductData(prev => ({
           ...prev,
-          media: [...prev.media, ...uploadedItems]
+          media: [...prev.media, { type: 'video', url: data.url, id: data.public_id }]
         }));
-        
-      } catch (error) {
-        console.error('Error uploading videos:', error);
-        setSaveError('Failed to upload videos. Please try again.');
-      } finally {
-        setIsSaving(false);
+      } else {
+        throw new Error(data.error || 'Failed to upload video');
       }
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      setSaveError('Failed to upload video. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -233,18 +213,18 @@ export default function AddProductPage() {
     const mediaItem = productData.media.find(item => item.id === id);
     
     if (mediaItem) {
-      // If the URL is from Cloudinary, delete it from the server
-      if (mediaItem.url.includes('res.cloudinary.com')) {
+      // If the URL is from Google Cloud Storage, delete it from the server
+      if (mediaItem.url.includes('storage.googleapis.com')) {
         try {
-          const response = await fetch(`/api/upload/cloudinary?publicId=${encodeURIComponent(id)}`, {
-            method: 'DELETE'
+          const response = await fetch(`/api/upload?fileId=${encodeURIComponent(id)}`, {
+            method: 'DELETE',
           });
           
           if (!response.ok) {
-            console.error('Failed to delete media from Cloudinary');
+            console.error('Failed to delete media from storage');
           }
         } catch (error) {
-          console.error('Error deleting media from Cloudinary:', error);
+          console.error('Error deleting media from storage:', error);
         }
       }
     }

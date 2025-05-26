@@ -1,126 +1,91 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadImage } from '@/app/lib/cloudinary';
-import { cookies } from 'next/headers';
+import { uploadImage, uploadVideo, deleteFile } from '@/app/lib/cloudinary';
 
-// Maximum file size (5MB)
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+// Maximum file size (5MB for images, 50MB for videos)
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; 
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const cookieStore = cookies();
-    const adminToken = cookieStore.get('admin_token');
-    const regularToken = cookieStore.get('token');
-    
-    if (!adminToken?.value && !regularToken?.value) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
-    }
-    
     // Parse form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const folder = formData.get('folder') as string || 'perfume-store';
+    const folder = formData.get('folder') as string || 'perfume_products';
+    const resourceType = formData.get('resourceType') as string || 'image';
     
     if (!file) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
     }
     
     // Check file size
-    if (file.size > MAX_FILE_SIZE) {
+    const maxSize = resourceType === 'video' ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (file.size > maxSize) {
       return NextResponse.json({ 
         success: false, 
-        error: `File size exceeds limit (${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB)` 
+        error: `File too large. Maximum size is ${maxSize / (1024 * 1024)}MB` 
       }, { status: 400 });
     }
     
-    // Check if Cloudinary API secret is configured
-    if (!process.env.CLOUDINARY_API_SECRET) {
-      console.error('Cloudinary API secret is not configured');
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cloudinary configuration error' 
-      }, { status: 500 });
-    }
-    
-    // Convert file to base64
+    // Convert File to base64 for Cloudinary
     const buffer = await file.arrayBuffer();
     const base64String = Buffer.from(buffer).toString('base64');
     const base64File = `data:${file.type};base64,${base64String}`;
     
     // Upload to Cloudinary
-    const uploadResult = await uploadImage(base64File, folder);
-    
-    if (!uploadResult || !uploadResult.url) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to upload image to Cloudinary' 
-      }, { status: 500 });
+    let result;
+    if (resourceType === 'video') {
+      result = await uploadVideo(base64File, folder);
+    } else {
+      result = await uploadImage(base64File, folder);
     }
     
-    return NextResponse.json({ 
-      success: true, 
-      data: uploadResult 
+    // Return success response
+    return NextResponse.json({
+      success: true,
+      public_id: result.public_id,
+      url: result.secure_url || result.url,
+      format: result.format
     });
-  } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Server error',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 });
+  } catch (error: any) {
+    console.error('Cloudinary upload error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error.message || 'Failed to upload file',
+        details: error.toString()
+      },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Check authentication
-    const cookieStore = cookies();
-    const adminToken = cookieStore.get('admin_token');
-    const regularToken = cookieStore.get('token');
-    
-    if (!adminToken?.value && !regularToken?.value) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
-    }
-    
-    // Get public ID from query params
+    // Get the public ID from the query parameters
     const { searchParams } = new URL(request.url);
     const publicId = searchParams.get('publicId');
+    const resourceType = searchParams.get('resourceType') || 'image';
     
     if (!publicId) {
-      return NextResponse.json({ success: false, error: 'Public ID is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'No public ID provided' }, { status: 400 });
     }
     
-    // Check if Cloudinary API secret is configured
-    if (!process.env.CLOUDINARY_API_SECRET) {
-      console.error('Cloudinary API secret is not configured');
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cloudinary configuration error' 
-      }, { status: 500 });
-    }
+    // Delete the file from Cloudinary
+    const result = await deleteFile(publicId, resourceType as 'image' | 'video');
     
-    // Delete from Cloudinary
-    const { deleteImage } = await import('@/app/lib/cloudinary');
-    const result = await deleteImage(publicId);
-    
-    return NextResponse.json({ 
-      success: true, 
-      result 
+    return NextResponse.json({
+      success: true,
+      result
     });
-  } catch (error) {
-    console.error('Error deleting from Cloudinary:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Server error',
-      details: process.env.NODE_ENV === 'development' ? error : undefined
-    }, { status: 500 });
+  } catch (error: any) {
+    console.error('Cloudinary delete error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error.message || 'Failed to delete file',
+        details: error.toString()
+      },
+      { status: 500 }
+    );
   }
-}
-
-export const dynamic = 'force-dynamic';
-
-export const config = {
-  api: {
-    bodyParser: false, // Disable body parsing, we'll use formData
-  },
-}; 
+} 

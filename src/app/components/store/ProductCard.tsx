@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FiShoppingBag, FiHeart, FiStar } from 'react-icons/fi';
 import { useAuth } from '@/app/components/AuthProvider';
-import CloudinaryImage from '../ui/CloudinaryImage';
+import Image from 'next/image';
 
 interface Product {
   _id: string;
@@ -259,13 +259,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         
         {/* Product Image */}
         <div className="relative h-64 md:h-80 overflow-hidden">
-          <CloudinaryImage
+          <Image
             src={product.images[0]?.url || '/placeholder-image.jpg'}
             alt={product.name}
             width={400}
             height={500}
             className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
-            crop="fill"
           />
         </div>
         

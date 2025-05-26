@@ -27,7 +27,8 @@ const nextConfig = {
     ADMIN_PHONE: '8126518755',
     CLOUDINARY_CLOUD_NAME: 'dzzxpyqif',
     CLOUDINARY_API_KEY: '992368173733427',
-    CLOUDINARY_API_SECRET: 'kQuf9IxR7a503I0y-J_QVzx4RI8'
+    CLOUDINARY_API_SECRET: 'kQuf9IxR7a503I0y-J_QVzx4RI8',
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: 'dzzxpyqif'
   },
   output: 'standalone',
   // Add experimental features to improve compatibility with Vercel deployments

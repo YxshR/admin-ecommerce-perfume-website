@@ -4,10 +4,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiSave, FiX, FiUpload } from 'react-icons/fi';
 
-// Cloudinary configuration
-const CLOUDINARY_CLOUD_NAME = 'diu6ydnvw';
-const CLOUDINARY_API_KEY = '234276983864414';
-const CLOUDINARY_UPLOAD_PRESET = 'ml_default'; // Create an unsigned upload preset in your Cloudinary dashboard
+// Google Cloud Storage API endpoint
+const API_UPLOAD_ENDPOINT = '/api/upload';
 
 interface Product {
   _id: string;
@@ -130,19 +128,32 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
-  // Upload file to Cloudinary
-  const uploadToCloudinary = async (file: File, resourceType: 'image' | 'video') => {
+  // Upload file to Google Cloud Storage
+  const uploadToStorage = async (file: File, resourceType: 'image' | 'video') => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-    formData.append('cloud_name', CLOUDINARY_CLOUD_NAME);
+    formData.append('resourceType', resourceType);
+    formData.append('folder', resourceType === 'image' ? 'product_images' : 'product_videos');
     
     try {
-      const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
-      const response = await axios.post(url, formData);
+      const response = await fetch(API_UPLOAD_ENDPOINT, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Upload failed');
+      }
+      
       return {
-        public_id: response.data.public_id,
-        url: response.data.secure_url
+        public_id: data.public_id,
+        url: data.url
       };
     } catch (err) {
       console.error(`Error uploading ${resourceType}:`, err);
@@ -160,13 +171,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
       let newImages = [...formData.images];
       
       if (imageFiles.length > 0) {
-        setUploadStatus('Uploading images to Cloudinary...');
+        setUploadStatus('Uploading images to storage...');
         
-        // Upload each image to Cloudinary
-        const uploadPromises = imageFiles.map(file => uploadToCloudinary(file, 'image'));
+        // Upload each image to Google Cloud Storage
+        const uploadPromises = imageFiles.map(file => uploadToStorage(file, 'image'));
         const uploadedImagesData = await Promise.all(uploadPromises);
         
-        // Replace existing images with new ones from Cloudinary
+        // Replace existing images with new ones
         newImages = uploadedImagesData;
         setUploadStatus('Images uploaded successfully!');
       }
@@ -175,13 +186,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
       let newVideos = [...formData.videos];
       
       if (videoFiles.length > 0) {
-        setUploadStatus('Uploading videos to Cloudinary...');
+        setUploadStatus('Uploading videos to storage...');
         
-        // Upload each video to Cloudinary
-        const uploadPromises = videoFiles.map(file => uploadToCloudinary(file, 'video'));
+        // Upload each video to Google Cloud Storage
+        const uploadPromises = videoFiles.map(file => uploadToStorage(file, 'video'));
         const uploadedVideosData = await Promise.all(uploadPromises);
         
-        // Add new videos from Cloudinary
+        // Add new videos
         newVideos = [...newVideos, ...uploadedVideosData];
         setUploadStatus('Videos uploaded successfully!');
       }

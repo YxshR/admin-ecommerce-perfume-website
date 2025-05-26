@@ -9,6 +9,7 @@
     "lint": "node node_modules/next/dist/bin/next lint"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.16.0",
     "@react-email/components": "^0.0.41",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/nodemailer": "^6.4.17",

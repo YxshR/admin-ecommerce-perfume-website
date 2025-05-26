@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiShoppingBag, FiHeart, FiStar, FiArrowLeft } from 'react-icons/fi';
-import CloudinaryImage from '@/app/components/ui/CloudinaryImage';
+import Image from 'next/image';
 
 interface Product {
   _id: string;
@@ -238,7 +238,7 @@ export default function ProductDetailPage() {
     if (!product || !product.images || product.images.length === 0) {
       return (
         <div className="aspect-square bg-gray-100 rounded-lg">
-          <CloudinaryImage
+          <Image
             src="/placeholder-image.jpg"
             alt="Product placeholder"
             width={600}
@@ -250,41 +250,36 @@ export default function ProductDetailPage() {
     }
     
     return (
-      <div className="grid grid-cols-1 gap-4">
-        {/* Main image */}
-        <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
-          <CloudinaryImage
+      <div>
+        <div className="aspect-square bg-gray-50 rounded-lg mb-2 overflow-hidden">
+          <Image
             src={product.images[selectedImage]?.url || '/placeholder-image.jpg'}
-            alt={product.name}
+            alt={`${product.name} - Image ${selectedImage + 1}`}
             width={600}
             height={800}
-            className="w-full h-full object-cover"
-            priority={true}
+            className="w-full h-full object-cover rounded-lg"
           />
         </div>
         
-        {/* Thumbnail gallery */}
-        {product.images.length > 1 && (
-          <div className="grid grid-cols-5 gap-2">
-            {product.images.map((image, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedImage(index)}
-                className={`aspect-square rounded-md overflow-hidden border-2 ${
-                  selectedImage === index ? 'border-black' : 'border-transparent'
-                }`}
-              >
-                <CloudinaryImage
-                  src={image.url}
-                  alt={`${product.name} - View ${index + 1}`}
-                  width={100}
-                  height={100}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-4 gap-2">
+          {product.images.map((image, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedImage(index)}
+              className={`relative aspect-square rounded-md overflow-hidden border-2 ${
+                selectedImage === index ? 'border-black' : 'border-transparent'
+              }`}
+            >
+              <Image
+                src={image.url}
+                alt={`${product.name} - Thumbnail ${index + 1}`}
+                width={100}
+                height={100}
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
       </div>
     );
   };
