@@ -6,6 +6,13 @@ import { FiShoppingBag, FiHeart, FiStar } from 'react-icons/fi';
 import { useAuth } from '@/app/components/AuthProvider';
 import Image from 'next/image';
 
+// Custom event for cart updates
+export const triggerMiniCartOpen = () => {
+  // Create and dispatch a custom event that Nav.tsx can listen for
+  const event = new CustomEvent('openMiniCart');
+  window.dispatchEvent(event);
+};
+
 interface Product {
   _id: string;
   name: string;
@@ -81,63 +88,45 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   };
   
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
     setIsAddingToCart(true);
     
-    try {
-      if (isAuthenticated) {
-        // Use the API for authenticated users
-        const response = await fetch('/api/cart', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
-          },
-          body: JSON.stringify({
-            productId: product._id,
-            quantity: 1
-          }),
-          credentials: 'include'
-        });
-        
-        // Handle 401 unauthorized separately - user might have been logged out
-        if (response.status === 401) {
-          // Use localStorage as fallback if authentication fails
-          addToLocalStorageCart();
-          return;
-        }
-        
-        if (!response.ok) {
-          throw new Error('Failed to add to cart');
-        }
-        
-        // Successfully added to server-side cart
-      } else {
-        // Use localStorage for non-authenticated users
-        addToLocalStorageCart();
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      // Use localStorage as fallback if API call fails
-      addToLocalStorageCart();
-    } finally {
-      // Show animation and then reset
+    // Using the improved AddToCartButton component's functionality directly
+    import('@/app/components/AddToCartButton').then(module => {
+      // Get the trigger function
+      const { triggerMiniCartOpen } = module;
+      
+      // Update localStorage cart
+      addToLocalStorageCart(false);
+      
+      // Show mini cart
+      triggerMiniCartOpen();
+      
+      // Reset loading state
       setTimeout(() => {
         setIsAddingToCart(false);
-      }, 1000);
-    }
+      }, 800);
+    });
   };
   
   // Helper function to add item to localStorage cart
-  const addToLocalStorageCart = () => {
+  const addToLocalStorageCart = (showAlert = true) => {
     try {
+      // Get existing cart or initialize empty array
+      const savedCart = localStorage.getItem('cart') || '[]';
       let cart = [];
-      const savedCart = localStorage.getItem('cart');
-      if (savedCart) {
+      
+      try {
         cart = JSON.parse(savedCart);
+        if (!Array.isArray(cart)) {
+          console.error('Cart is not an array, resetting');
+          cart = [];
+        }
+      } catch (parseError) {
+        console.error('Error parsing cart:', parseError);
+        cart = [];
       }
       
       // Check if product is already in cart
@@ -160,10 +149,24 @@ export default function ProductCard({ product }: ProductCardProps) {
       // Save updated cart
       localStorage.setItem('cart', JSON.stringify(cart));
       
-      // Trigger storage event for other components
-      window.dispatchEvent(new Event('storage'));
+      // Force UI update across components by manually triggering storage event
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'cart',
+        newValue: JSON.stringify(cart),
+        storageArea: localStorage
+      }));
+      
+      // Also update a timestamp to force refresh
+      localStorage.setItem('cart_updated', Date.now().toString());
+      
+      // Show success message if requested
+      if (showAlert) {
+        // Use mini cart instead of alert
+        triggerMiniCartOpen();
+      }
     } catch (error) {
       console.error('Error adding to localStorage cart:', error);
+      alert('Failed to add product to cart. Please try again.');
     }
   };
   

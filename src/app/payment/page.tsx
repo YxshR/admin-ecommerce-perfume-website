@@ -78,7 +78,7 @@ export default function PaymentPage() {
       setLoading(true);
       
       // Check for address ID in query params
-      const addressId = searchParams.get('addressId');
+      const addressId = searchParams?.get('addressId');
       if (addressId) {
         await fetchSelectedAddress(addressId);
       } else {
@@ -87,7 +87,8 @@ export default function PaymentPage() {
         if (savedShippingAddress) {
           setShippingAddress(JSON.parse(savedShippingAddress));
         } else {
-          router.push('/checkout');
+          // Instead of redirecting to /checkout, go back to homepage
+          router.push('/');
           return;
         }
       }
@@ -96,7 +97,8 @@ export default function PaymentPage() {
       await fetchCart();
     } catch (error) {
       console.error('Error loading data:', error);
-      router.push('/checkout');
+      // Instead of redirecting to /checkout, go back to homepage
+      router.push('/');
     } finally {
       setLoading(false);
     }

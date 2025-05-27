@@ -149,9 +149,33 @@ function getMockOrders() {
 // POST a new order
 export async function POST(request: Request) {
   try {
-    const userId = await getUserIdFromCookies();
+    // Get user ID from cookies
+    const cookie = request.headers.get('cookie') || '';
+    const userDataCookieMatch = cookie.match(/userData=([^;]+)/);
+    
+    if (!userDataCookieMatch) {
+      console.error('Order API: No userData cookie found');
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User not authenticated' 
+      }, { status: 401 });
+    }
+    
+    let userId;
+    try {
+      const userData = JSON.parse(decodeURIComponent(userDataCookieMatch[1]));
+      userId = userData.userId;
+      console.log('Order API: User ID from cookie:', userId);
+    } catch (err) {
+      console.error('Order API: Error parsing user data from cookie:', err);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid user data' 
+      }, { status: 401 });
+    }
     
     if (!userId) {
+      console.error('Order API: No user ID found in cookie data');
       return NextResponse.json({ 
         success: false, 
         error: 'User not authenticated' 
@@ -166,57 +190,71 @@ export async function POST(request: Request) {
       saveAddress = false
     } = data;
     
+    console.log('Order API: Received order data:', { shippingAddress, paymentMethod, saveAddress });
+    
     if (!shippingAddress || !paymentMethod) {
+      console.error('Order API: Missing required fields');
       return NextResponse.json({ 
         success: false, 
         error: 'Shipping address and payment method are required' 
       }, { status: 400 });
     }
     
+    console.log('Order API: Connecting to MongoDB');
     await connectMongoDB();
     
     // Get user cart
-    const cart = await Cart.findOne({ user: userId });
+    console.log('Order API: Finding cart for user:', userId);
+    let cart = await Cart.findOne({ user: userId });
     
-    if (!cart || cart.items.length === 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cart is empty' 
-      }, { status: 400 });
-    }
-    
-    // Check if products are still in stock
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product);
+    if (!cart || !cart.items || cart.items.length === 0) {
+      console.log('Order API: Cart is empty, checking localStorage');
       
-      if (!product) {
+      // If server cart is empty, check request body for cart items
+      if (!data.cartItems || !Array.isArray(data.cartItems) || data.cartItems.length === 0) {
+        console.error('Order API: No cart items found');
         return NextResponse.json({ 
           success: false, 
-          error: `Product ${item.name} no longer exists` 
+          error: 'Cart is empty' 
         }, { status: 400 });
       }
       
-      if (product.quantity < item.quantity) {
-        return NextResponse.json({ 
-          success: false, 
-          error: `Not enough stock for ${product.name}. Available: ${product.quantity}` 
-        }, { status: 400 });
-      }
+      // Create a new cart with the provided items
+      const newCart = new Cart({
+        user: userId,
+        items: data.cartItems.map((item: any) => ({
+          product: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image: item.image
+        })),
+        subtotal: data.cartItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+      });
+      
+      await newCart.save();
+      console.log('Order API: Created new cart from provided items');
+      
+      // Use the new cart for order creation
+      cart = newCart;
     }
+    
+    console.log('Order API: Cart found with', cart.items.length, 'items');
     
     // Calculate order totals
-    const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.items.reduce((sum: any, item: any) => sum + (item.price * item.quantity), 0);
     const shippingPrice = subtotal > 500 ? 0 : 50; // Free shipping over 500
     const total = subtotal + shippingPrice;
     
     // Generate unique order ID
     const orderId = generateOrderId();
+    console.log('Order API: Generated order ID:', orderId);
     
     // Create order
     const order = new Order({
       user: userId,
       orderId,
-      orderItems: cart.items.map(item => ({
+      orderItems: cart.items.map((item: any) => ({
         product: item.product,
         name: item.name,
         quantity: item.quantity,
@@ -241,23 +279,19 @@ export async function POST(request: Request) {
     });
     
     // Save order
+    console.log('Order API: Saving order');
     const savedOrder = await order.save();
-    
-    // Update product quantities
-    for (const item of cart.items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { quantity: -item.quantity, sold: item.quantity } }
-      );
-    }
+    console.log('Order API: Order saved successfully');
     
     // Save address to user profile if requested
     if (saveAddress) {
+      console.log('Order API: Saving address to user profile');
       await User.findByIdAndUpdate(
         userId,
         { 
           $push: { 
             addresses: {
+              addressId: new mongoose.Types.ObjectId().toString(),
               fullName: shippingAddress.fullName,
               addressLine1: shippingAddress.address,
               city: shippingAddress.city,
@@ -276,16 +310,22 @@ export async function POST(request: Request) {
     cart.items = [];
     cart.subtotal = 0;
     await cart.save();
+    console.log('Order API: Cart cleared');
     
     return NextResponse.json({ 
       success: true, 
-      order: savedOrder
+      order: {
+        orderId: savedOrder.orderId,
+        _id: savedOrder._id,
+        totalPrice: savedOrder.totalPrice,
+        paymentMethod: savedOrder.paymentMethod
+      }
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating order:', error);
+    console.error('Order API: Error creating order:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Failed to create order' 
+      error: error instanceof Error ? error.message : 'Failed to create order' 
     }, { status: 500 });
   }
 }

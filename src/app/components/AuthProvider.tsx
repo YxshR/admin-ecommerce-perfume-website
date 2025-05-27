@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  phone?: string;
 }
 
 interface AuthContextType {
@@ -43,28 +44,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   // Function to check authentication status
-    const checkAuth = () => {
-      try {
-        // Check for client-side cookie indicator
-        const loginStatus = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('isLoggedIn='))
-          ?.split('=')[1];
-        
+  const checkAuth = () => {
+    try {
+      // Check for client-side cookie indicator
+      const loginStatus = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('isLoggedIn='))
+        ?.split('=')[1];
+      
       if (loginStatus) {
-          // Get user data from cookie
-          const userDataCookie = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('userData='))
-            ?.split('=')[1];
-          
-          if (userDataCookie) {
-            try {
-              const userData = JSON.parse(decodeURIComponent(userDataCookie));
+        // Get user data from cookie
+        const userDataCookieMatch = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('userData='));
+        
+        if (userDataCookieMatch) {
+          try {
+            // Extract and decode the cookie value properly
+            const cookieValue = userDataCookieMatch.split('=')[1];
+            const decodedValue = decodeURIComponent(cookieValue);
+            const userData = JSON.parse(decodedValue);
+            
             secureLog('Auth check: User authenticated');
-              setUser(userData);
-            } catch (parseError) {
+            setUser(userData);
+          } catch (parseError) {
             secureLog('Auth error: Failed to parse user data');
+            console.error('Auth parse error details:', parseError);
             setUser(null);
           }
         } else {
@@ -75,14 +80,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         secureLog('Auth check: Not logged in');
         setUser(null);
       }
-      } catch (error) {
+    } catch (error) {
       secureLog('Auth error: Error checking authentication');
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
+      console.error('Auth check error details:', error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Check authentication status when component mounts
   useEffect(() => {
     checkAuth();
@@ -146,6 +152,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Trigger a storage event to ensure all tabs are updated
         window.localStorage.setItem('auth_timestamp', Date.now().toString());
         
+        // Dispatch custom event for cart refresh
+        window.dispatchEvent(new Event('auth_change'));
+        
         // Directly call checkAuth to ensure state is updated immediately
         checkAuth();
         
@@ -160,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           router.push(redirectPath);
         } else {
           // Check URL parameter
-          const urlRedirect = searchParams.get('redirect');
+          const urlRedirect = searchParams?.get('redirect');
           if (urlRedirect) {
             secureLog('Redirecting user after login');
             router.push(urlRedirect);
@@ -218,6 +227,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Trigger a storage event to ensure all tabs are updated
       window.localStorage.setItem('auth_timestamp', Date.now().toString());
+      
+      // Dispatch custom event for cart refresh
+      window.dispatchEvent(new Event('auth_change'));
       
       router.push('/');
       router.refresh();

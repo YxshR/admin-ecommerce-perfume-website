@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { FiUser, FiShoppingBag, FiHeart, FiSearch, FiLogOut, FiX, FiMenu, FiChevronDown } from 'react-icons/fi';
 import { useAuth } from './AuthProvider';
+import MiniCartWithModal from './MiniCartWithModal';
 
 // Define types for nav item settings
 interface NavItem {
@@ -31,6 +32,7 @@ export default function Nav() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [miniCartOpen, setMiniCartOpen] = useState(false);
   const accountDropdownRef = useRef<HTMLDivElement>(null);
   
   // State for admin-configured settings
@@ -90,27 +92,88 @@ export default function Nav() {
   useEffect(() => {
     const getCartCount = () => {
       try {
-        const cart = localStorage.getItem('cart');
-        if (cart) {
-          const parsedCart = JSON.parse(cart);
-          // Count total items including quantities
-          const count = parsedCart.reduce((total: number, item: any) => total + item.quantity, 0);
-          setCartItemsCount(count);
+        if (isAuthenticated) {
+          console.log("Getting cart count for authenticated user");
+          // For authenticated users, fetch from server
+          fetch('/api/cart', {
+            credentials: 'include',
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Failed to fetch cart: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.success && data.cart && Array.isArray(data.cart.items)) {
+              const serverCount = data.cart.items.reduce((total: number, item: any) => total + item.quantity, 0);
+              console.log("Server cart count:", serverCount);
+              setCartItemsCount(serverCount);
+            } else {
+              // If server returns empty cart, check localStorage as fallback
+              checkLocalStorageCart();
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching cart count:', error);
+            // Use localStorage count as fallback
+            checkLocalStorageCart();
+          });
         } else {
-          setCartItemsCount(0);
+          // For non-authenticated users, use localStorage
+          checkLocalStorageCart();
         }
       } catch (error) {
-        console.error('Error parsing cart data:', error);
+        console.error('Error in getCartCount:', error);
+        setCartItemsCount(0);
       }
     };
     
+    // Helper function to check localStorage cart
+    const checkLocalStorageCart = () => {
+      try {
+        const cart = localStorage.getItem('cart');
+        if (cart) {
+          const parsedCart = JSON.parse(cart);
+          if (Array.isArray(parsedCart)) {
+            // Count total items including quantities
+            const count = parsedCart.reduce((total: number, item: any) => total + item.quantity, 0);
+            console.log("localStorage cart count:", count);
+            setCartItemsCount(count);
+          } else {
+            setCartItemsCount(0);
+          }
+        } else {
+          setCartItemsCount(0);
+        }
+      } catch (parseError) {
+        console.error('Error parsing localStorage cart:', parseError);
+        setCartItemsCount(0);
+      }
+    };
+    
+    // Initial count
     getCartCount();
-    window.addEventListener('storage', getCartCount);
+    
+    // Set up event listeners
+    const handleStorageChange = () => {
+      console.log('Storage event detected in Nav, updating cart count');
+      getCartCount();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Add a timer to periodically check cart count (every 5 seconds)
+    const intervalId = setInterval(getCartCount, 5000);
     
     return () => {
-      window.removeEventListener('storage', getCartCount);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   // Handle clicks outside the dropdown
   useEffect(() => {
@@ -123,6 +186,40 @@ export default function Nav() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Listen for custom event to open mini cart
+  useEffect(() => {
+    const handleOpenMiniCart = () => {
+      setMiniCartOpen(true);
+    };
+    
+    // Check for localStorage flag to open checkout modal
+    const checkForCheckoutFlag = () => {
+      try {
+        const openCheckoutModal = localStorage.getItem('open_checkout_modal');
+        if (openCheckoutModal === 'true') {
+          // Clear the flag
+          localStorage.removeItem('open_checkout_modal');
+          // Open mini cart
+          setMiniCartOpen(true);
+        }
+      } catch (error) {
+        console.error('Error checking localStorage for checkout flag:', error);
+      }
+    };
+    
+    // Check when component mounts
+    checkForCheckoutFlag();
+    
+    window.addEventListener('openMiniCart', handleOpenMiniCart);
+    // Also listen for storage events in case the flag is set from another tab
+    window.addEventListener('storage', checkForCheckoutFlag);
+    
+    return () => {
+      window.removeEventListener('openMiniCart', handleOpenMiniCart);
+      window.removeEventListener('storage', checkForCheckoutFlag);
     };
   }, []);
   
@@ -158,8 +255,15 @@ export default function Nav() {
     setAccountDropdownOpen(!accountDropdownOpen);
   };
   
+  const toggleMiniCart = () => {
+    setMiniCartOpen(!miniCartOpen);
+  };
+  
   return (
     <>
+      {/* Mini Cart Component */}
+      <MiniCartWithModal isOpen={miniCartOpen} onClose={() => setMiniCartOpen(false)} />
+      
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50">
@@ -318,18 +422,21 @@ export default function Nav() {
                 </Link>
               )}
               
-              <Link 
-                href="/cart" 
-                className={`p-2 relative ${pathname === '/cart' ? 'text-black' : 'text-gray-600'}`}
-                aria-label="Cart"
-              >
-                <FiShoppingBag size={20} />
-                {cartItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-black text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                    {cartItemsCount > 9 ? '9+' : cartItemsCount}
-                  </span>
-                )}
-              </Link>
+              {/* Cart Button */}
+              <div className="relative">
+                <button
+                  onClick={toggleMiniCart}
+                  className="p-2 text-gray-700 hover:text-black relative"
+                  aria-label="Shopping cart"
+                >
+                  <FiShoppingBag size={24} />
+                  {cartItemsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                      {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                    </span>
+                  )}
+                </button>
+              </div>
               
               <button 
                 className="md:hidden p-2 text-black"

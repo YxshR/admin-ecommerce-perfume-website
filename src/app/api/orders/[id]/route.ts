@@ -48,70 +48,68 @@ type OrderDocument = {
   isPaid?: boolean;
 };
 
-// Helper function to extract user ID from cookies
-const getUserIdFromCookies = async () => {
-  const cookieStore = await cookies();
-  const userData = cookieStore.get('userData');
-  
-  if (!userData) return null;
-  
-  try {
-    const parsedData = JSON.parse(userData.value);
-    return parsedData.userId;
-  } catch (err) {
-    console.error('Error parsing user data from cookie:', err);
-    return null;
-  }
-};
-
-// GET specific order
+// GET order by ID
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = await getUserIdFromCookies();
+    console.log('Order API: Fetching order with ID:', params.id);
+    
+    // Get user ID from cookies
+    const userId = await getUserIdFromCookies(request);
     
     if (!userId) {
+      console.error('Order API: User not authenticated');
       return NextResponse.json({ 
         success: false, 
         error: 'User not authenticated' 
       }, { status: 401 });
     }
     
-    const { id } = params;
-    
-    if (!id) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Order ID is required' 
-      }, { status: 400 });
-    }
-    
     await connectMongoDB();
     
     // Find the order
-    const order = await Order.findOne({
+    const order = await Order.findOne({ 
       $or: [
-        { _id: id },
-        { orderId: id }
+        { _id: params.id },
+        { orderId: params.id }
       ],
       user: userId
     });
     
     if (!order) {
+      console.error('Order API: Order not found with ID:', params.id);
       return NextResponse.json({ 
         success: false, 
         error: 'Order not found' 
       }, { status: 404 });
     }
     
+    console.log('Order API: Order found:', order._id);
+    
     return NextResponse.json({ 
       success: true, 
-      order 
+      order: {
+        _id: order._id,
+        orderId: order.orderId,
+        items: order.orderItems || [],
+        shippingAddress: order.shippingAddress,
+        paymentMethod: order.paymentMethod,
+        paymentResult: order.paymentResult || {},
+        itemsPrice: order.itemsPrice,
+        shippingPrice: order.shippingPrice,
+        taxPrice: order.taxPrice || 0,
+        totalPrice: order.totalPrice,
+        isPaid: order.isPaid,
+        paidAt: order.paidAt,
+        isDelivered: order.isDelivered,
+        status: order.status || 'Processing',
+        createdAt: order.createdAt
+      }
     });
   } catch (error) {
-    console.error('Error fetching order:', error);
+    console.error('Order API: Error fetching order:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Failed to fetch order' 
@@ -119,13 +117,31 @@ export async function GET(
   }
 }
 
+// Helper function to extract user ID from cookies
+const getUserIdFromCookies = async (request: Request) => {
+  try {
+    const cookie = request.headers.get('cookie') || '';
+    const userDataCookieMatch = cookie.match(/userData=([^;]+)/);
+    
+    if (!userDataCookieMatch) {
+      return null;
+    }
+    
+    const userData = JSON.parse(decodeURIComponent(userDataCookieMatch[1]));
+    return userData.userId;
+  } catch (err) {
+    console.error('Error parsing user data from cookie:', err);
+    return null;
+  }
+};
+
 // Update order status
 export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = await getUserIdFromCookies();
+    const userId = await getUserIdFromCookies(request);
     const { id } = params;
     
     // For order status updates, we might need admin privileges
