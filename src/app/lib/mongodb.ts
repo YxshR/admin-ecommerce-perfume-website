@@ -6,11 +6,12 @@ if (process.env.NODE_ENV === 'development') {
   mongoose.set('autoIndex', false); // Disable automatic index creation to prevent warnings
 }
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI as string;
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
+// Validate MongoDB URI format
+const isValidMongoDBURI = (uri: string): boolean => {
+  return uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://');
+};
 
 // Global interface
 interface MongooseConnection {
@@ -32,59 +33,35 @@ if (!globalWithMongoose.mongoose) {
  * Connect to MongoDB using mongoose
  * @returns Promise that resolves to the mongoose instance
  */
-async function connectMongoDB(): Promise<typeof mongoose> {
-  // If there's an existing connection, return it
-  if (globalWithMongoose.mongoose.conn) {
-    return globalWithMongoose.mongoose.conn;
+export async function connectToDatabase() {
+  console.log('Connecting to MongoDB...');
+  
+  if (!MONGODB_URI) {
+    throw new Error('MongoDB URI is not defined in environment variables');
   }
-
-  // If a connection is in progress, wait for it
-  if (!globalWithMongoose.mongoose.promise) {
-    // Connect to the database
-    console.log('Connecting to MongoDB...');
-    
-    if (!MONGODB_URI) {
-      console.error('MONGODB_URI is undefined or empty!');
-      throw new Error('MONGODB_URI environment variable is not defined');
-    }
-    
-    console.log('MongoDB URI format check:', 
-      MONGODB_URI.startsWith('mongodb+srv://') ? 'Valid format' : 'Invalid format');
-    
-    globalWithMongoose.mongoose.promise = mongoose.connect(MONGODB_URI, {
-      bufferCommands: true,
-      // Add any other connection options if needed
-      serverSelectionTimeoutMS: 30000, // 30 seconds
-      connectTimeoutMS: 30000,
-    })
-    .then((mongoose) => {
-      console.log('MongoDB connected successfully');
-      return mongoose;
-    })
-    .catch((error) => {
-      console.error('MongoDB connection error:', error);
-      console.error('Connection error details:', error.message);
-      if (error.name === 'MongoNetworkError') {
-        console.error('Network error - check your connection and MongoDB URI');
-      } else if (error.name === 'MongoServerSelectionError') {
-        console.error('Server selection error - MongoDB server may be down or unreachable');
-      }
-      
-      globalWithMongoose.mongoose.promise = null;
-      throw error;
-    });
+  
+  // Validate the URI format
+  if (!isValidMongoDBURI(MONGODB_URI)) {
+    throw new Error('Invalid MongoDB URI format');
   }
-
+  
+  console.log('MongoDB URI format check: Valid format');
+  
+  // Check if we're already connected
+  if (mongoose.connection.readyState === 1) {
+    console.log('MongoDB already connected');
+    return mongoose.connection;
+  }
+  
   try {
-    // Wait for the connection to be established
-    globalWithMongoose.mongoose.conn = await globalWithMongoose.mongoose.promise;
-    return globalWithMongoose.mongoose.conn;
+    // Connect to MongoDB
+    await mongoose.connect(MONGODB_URI);
+    console.log('MongoDB connected successfully');
+    return mongoose.connection;
   } catch (error) {
-    // Reset the promise if there's an error
-    globalWithMongoose.mongoose.promise = null;
-    console.error('Failed to establish MongoDB connection:', error);
+    console.error('MongoDB connection error:', error);
     throw error;
   }
 }
 
-export default connectMongoDB; 
+export default connectToDatabase; 

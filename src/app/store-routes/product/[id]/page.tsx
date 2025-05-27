@@ -268,8 +268,14 @@ export default function ProductDetailPage() {
           ) : (
             <video 
               src={product.videos[selectedImage - product.images.length]?.url} 
-              controls
+              autoPlay
+              loop
+              muted={false}
+              playsInline
+              controls={false}
               className="w-full h-full object-cover rounded-lg"
+              onContextMenu={(e) => e.preventDefault()}
+              style={{ pointerEvents: 'none' }}
             />
           )}
         </div>

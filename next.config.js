@@ -48,10 +48,12 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['react-icons'],
     optimizeCss: true,
+    // Add improved chunk loading retries
+    webpackBuildWorker: true,
   },
   serverExternalPackages: [],
   // Handle Node.js modules in webpack
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       // Don't resolve 'fs' module on the client to prevent this error
       config.resolve.fallback = {
@@ -60,6 +62,45 @@ const nextConfig = {
         os: false,
         crypto: false,
       };
+      
+      // Improve chunk loading reliability
+      if (!dev) {
+        // Set a stable chunk loading global to avoid conflicts
+        config.output.chunkLoadingGlobal = 'webpackChunkEcommerce';
+        
+        // Use a more conservative chunking strategy
+        config.optimization.splitChunks = {
+          chunks: 'all',
+          cacheGroups: {
+            vendors: {
+              name: 'vendors',
+              test: /[\\/]node_modules[\\/]/,
+              priority: -10,
+              reuseExistingChunk: true,
+            },
+            common: {
+              name: 'commons',
+              minChunks: 2,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+          },
+        };
+
+        // Add terser plugin for minification with console removal
+        const TerserPlugin = require('terser-webpack-plugin');
+        config.optimization.minimizer = config.optimization.minimizer || [];
+        config.optimization.minimizer.push(
+          new TerserPlugin({
+            terserOptions: {
+              compress: {
+                drop_console: true,
+              },
+              mangle: true,
+            },
+          })
+        );
+      }
     }
     return config;
   },
@@ -84,4 +125,18 @@ const nextConfig = {
   }
 };
 
-module.exports = nextConfig; 
+module.exports = {
+  ...nextConfig,
+  async rewrites() {
+    return [
+      {
+        source: '/api/admin/upload',
+        destination: '/api/admin/upload'
+      },
+      {
+        source: '/api/admin/test-upload',
+        destination: '/api/admin/test-upload'
+      }
+    ]
+  }
+}; 

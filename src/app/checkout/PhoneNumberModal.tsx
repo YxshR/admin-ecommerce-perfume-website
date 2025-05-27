@@ -42,26 +42,31 @@ export default function PhoneNumberModal({
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-medium">Phone Verification</h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <FiX size={24} />
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center modal-backdrop">
+      <div 
+        className="bg-white rounded-lg max-w-md w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button in top right */}
+        <button 
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
+        >
+          <FiX size={24} />
+        </button>
+        
+        {/* Centered Title */}
+        <h2 className="text-2xl font-semibold text-center mb-6 pt-2">Phone Verification</h2>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label htmlFor="phone" className="block text-sm text-gray-700 mb-2">
+            <label htmlFor="phone" className="block text-lg mb-3">
               Enter your phone number
             </label>
-            <div className="flex">
-              <div className="flex items-center bg-gray-100 px-3 rounded-l-md border border-r-0 border-gray-300">
-                <span className="text-gray-500">+91</span>
+            
+            <div className="flex mb-2">
+              <div className="flex items-center justify-center bg-gray-100 px-4 py-3 rounded-l-md border border-r-0 border-gray-300 font-medium">
+                <span className="text-gray-700">+91</span>
               </div>
               <input
                 type="text"
@@ -76,29 +81,31 @@ export default function PhoneNumberModal({
                   }
                 }}
                 placeholder="10-digit phone number"
-                className={`flex-1 p-3 border rounded-r-md ${
+                className={`flex-1 p-3 border rounded-r-md text-lg ${
                   error ? 'border-red-500' : 'border-gray-300'
                 }`}
                 maxLength={10}
               />
             </div>
-            {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
-            <p className="text-xs text-gray-500 mt-2">
+            
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+            
+            <p className="text-sm text-gray-600 mt-3">
               We'll send you order updates and delivery information on this number
             </p>
           </div>
           
-          <div className="flex justify-end">
+          <div className="flex justify-between mt-8">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md mr-2"
+              className="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-md font-medium w-[48%]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-black text-white rounded-md"
+              className="px-6 py-3 bg-black text-white rounded-md font-medium w-[48%]"
             >
               Verify
             </button>

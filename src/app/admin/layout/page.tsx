@@ -19,15 +19,15 @@ import { useAdminAuth, getAdminToken } from '@/app/lib/admin-auth';
 // Define page sections for customization
 interface SectionItem {
   id: string;
-  type: 'product' | 'image' | 'video' | 'text' | 'banner';
+  type: 'product' | 'image' | 'video' | 'text' | 'banner' | 'gallery';
   content: any;
   position: number;
 }
 
 interface LayoutPage {
-  id: string;
-  name: string;
-  path: string;
+  pageId: string;
+  pageName: string;
+  pagePath: string;
   sections: SectionItem[];
 }
 
@@ -50,16 +50,23 @@ export default function AdminLayoutPage() {
   const [showSectionModal, setShowSectionModal] = useState(false);
   const [sectionType, setSectionType] = useState<SectionItem['type']>('product');
   const [previewMode, setPreviewMode] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
 
   // Mock available pages that can be customized
   const availablePages = [
-    { id: 'home', name: 'Home Page', path: '/' },
-    { id: 'collection', name: 'Collection Page', path: '/collection' },
-    { id: 'discovery-set', name: 'Discovery Sets', path: '/discovery-set' },
-    { id: 'combos', name: 'Combo Offers', path: '/combos' },
-    { id: 'new-arrivals', name: 'New Arrivals', path: '/new-arrivals' },
-    { id: 'gifting', name: 'Gifting Page', path: '/gifting' },
-    { id: 'about-us', name: 'About Us', path: '/about-us' }
+    { pageId: 'home', pageName: 'Home Page', pagePath: '/' },
+    { pageId: 'store', pageName: 'Store Page', pagePath: '/store-routes/store' },
+    { pageId: 'collection', pageName: 'Collection Page', pagePath: '/collection' },
+    { pageId: 'discovery-set', pageName: 'Discovery Sets', pagePath: '/discovery-set' },
+    { pageId: 'combos', pageName: 'Combo Offers', pagePath: '/combos' },
+    { pageId: 'new-arrivals', pageName: 'New Arrivals', pagePath: '/new-arrivals' },
+    { pageId: 'gifting', pageName: 'Gifting Page', pagePath: '/gifting' },
+    { pageId: 'about-us', pageName: 'About Us', pagePath: '/about-us' }
   ];
 
   useEffect(() => {
@@ -126,105 +133,128 @@ export default function AdminLayoutPage() {
   const fetchLayoutData = async () => {
     setLoading(true);
     try {
-      // In a real application, we would fetch layout data from an API
-      // For now, we'll use mock data based on availablePages
-      const mockLayoutData = availablePages.map(page => ({
-        ...page,
-        sections: generateMockSections(page.id)
-      }));
+      // Fetch layout data from the API
+      console.log('Fetching layout data from API...');
+      const response = await fetch('/api/admin/layout/get', {
+        headers: {
+          'Authorization': `Bearer ${getAdminToken()}`
+        }
+      });
       
-      setPages(mockLayoutData);
+      console.log('API response status:', response.status);
       
-      // Set first page as selected by default
-      if (mockLayoutData.length > 0 && !selectedPageId) {
-        setSelectedPageId(mockLayoutData[0].id);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch layout data: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('API response data:', data);
+      
+      if (data.layouts && data.layouts.length > 0) {
+        // We have existing layouts from the database
+        console.log(`Found ${data.layouts.length} layouts in the database`);
+        setPages(data.layouts);
+        
+        // Set first page as selected by default
+        if (data.layouts.length > 0 && !selectedPageId) {
+          console.log('Setting default selected page:', data.layouts[0].pageId);
+          setSelectedPageId(data.layouts[0].pageId);
+        }
+      } else {
+        // No layouts found in the database, use available pages as templates
+        console.log('No existing layouts found, creating templates from availablePages');
+        const templateLayouts: LayoutPage[] = availablePages.map(page => ({
+          pageId: page.pageId,
+          pageName: page.pageName,
+          pagePath: page.pagePath,
+          sections: []
+        }));
+        
+        console.log(`Created ${templateLayouts.length} template layouts`);
+        setPages(templateLayouts);
+      
+        // Set first page as selected by default
+        if (templateLayouts.length > 0 && !selectedPageId) {
+          console.log('Setting default selected page from templates:', templateLayouts[0].pageId);
+          setSelectedPageId(templateLayouts[0].pageId);
+        }
       }
     } catch (error) {
       console.error('Error fetching layout data:', error);
+      // Fallback to templates
+      console.log('Error occurred, falling back to template layouts');
+      const templateLayouts: LayoutPage[] = availablePages.map(page => ({
+        pageId: page.pageId,
+        pageName: page.pageName,
+        pagePath: page.pagePath,
+        sections: []
+      }));
+      
+      console.log(`Created ${templateLayouts.length} fallback template layouts`);
+      setPages(templateLayouts);
+      
+      // Set first page as selected by default
+      if (templateLayouts.length > 0 && !selectedPageId) {
+        console.log('Setting default selected page from fallback templates:', templateLayouts[0].pageId);
+        setSelectedPageId(templateLayouts[0].pageId);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Generate mock sections for demo purposes
-  const generateMockSections = (pageId: string): SectionItem[] => {
-    switch (pageId) {
-      case 'home':
-        return [
-          {
-            id: 'hero-banner',
-            type: 'banner',
-            content: {
-              title: 'Discover Your Signature Scent',
-              subtitle: 'Luxury fragrances for every occasion',
-              imageUrl: 'https://placehold.co/1200x600/272420/FFFFFF?text=Hero+Banner'
-            },
-            position: 0
-          },
-          {
-            id: 'featured-products',
-            type: 'product',
-            content: {
-              title: 'Featured Products',
-              productIds: ['prod-1', 'prod-2', 'prod-3', 'prod-4']
-            },
-            position: 1
-          },
-          {
-            id: 'promo-video',
-            type: 'video',
-            content: {
-              title: 'Our Craftsmanship',
-              videoUrl: 'https://www.example.com/videos/craftsmanship.mp4',
-              thumbnailUrl: 'https://placehold.co/800x450/272420/FFFFFF?text=Video+Thumbnail'
-            },
-            position: 2
-          }
-        ];
-      case 'collection':
-        return [
-          {
-            id: 'collection-header',
-            type: 'banner',
-            content: {
-              title: 'Our Collection',
-              subtitle: 'Explore our range of premium fragrances',
-              imageUrl: 'https://placehold.co/1200x600/272420/FFFFFF?text=Collection+Banner'
-            },
-            position: 0
-          },
-          {
-            id: 'bestsellers',
-            type: 'product',
-            content: {
-              title: 'Best Sellers',
-              productIds: ['prod-5', 'prod-6', 'prod-7', 'prod-8']
-            },
-            position: 1
-          }
-        ];
-      default:
-        return [
-          {
-            id: `${pageId}-default`,
-            type: 'text',
-            content: {
-              title: 'Welcome',
-              body: 'This page is ready to be customized.'
-            },
-            position: 0
-          }
-        ];
+  const handlePageSelect = (pageId: string) => {
+    console.log('Page selected:', pageId);
+    setSelectedPageId(pageId);
+    setPreviewMode(false);
+    
+    // Check if the page exists in the pages array
+    const pageExists = pages.find(page => page.pageId === pageId);
+    console.log('Page exists in pages array:', !!pageExists);
+    
+    if (!pageExists) {
+      // Create a new page template if it doesn't exist
+      console.log('Creating new page template for:', pageId);
+      const pageTemplate = availablePages.find(page => page.pageId === pageId);
+      
+      if (pageTemplate) {
+        const newPage = {
+          pageId: pageTemplate.pageId,
+          pageName: pageTemplate.pageName,
+          pagePath: pageTemplate.pagePath,
+          sections: []
+        };
+        
+        setPages(prevPages => [...prevPages, newPage]);
+        console.log('Added new page template:', newPage);
+      }
     }
   };
 
-  const handlePageSelect = (pageId: string) => {
-    setSelectedPageId(pageId);
-    setPreviewMode(false);
-  };
-
   const getCurrentPage = (): LayoutPage | undefined => {
-    return pages.find(page => page.id === selectedPageId);
+    const currentPage = pages.find(page => page.pageId === selectedPageId);
+    console.log('getCurrentPage called, selectedPageId:', selectedPageId);
+    console.log('Found page:', currentPage ? currentPage.pageName : 'Not found');
+    
+    // If page not found but selectedPageId exists, create a template page
+    if (!currentPage && selectedPageId) {
+      const template = availablePages.find(page => page.pageId === selectedPageId);
+      if (template) {
+        console.log('Creating template page for:', template.pageName);
+        const newPage = {
+          pageId: template.pageId,
+          pageName: template.pageName,
+          pagePath: template.pagePath,
+          sections: []
+        };
+        
+        // Add the new page to the pages array
+        setPages(prevPages => [...prevPages, newPage]);
+        return newPage;
+      }
+    }
+    
+    return currentPage;
   };
 
   const addNewSection = () => {
@@ -249,7 +279,7 @@ export default function AdminLayoutPage() {
     // Update the pages state with the new sections array
     setPages(prevPages => 
       prevPages.map(page => 
-        page.id === currentPage.id 
+        page.pageId === currentPage.pageId 
           ? { ...page, sections: updatedSections } 
           : page
       )
@@ -277,7 +307,7 @@ export default function AdminLayoutPage() {
     // Update the pages state
     setPages(prevPages => 
       prevPages.map(page => 
-        page.id === currentPage.id 
+        page.pageId === currentPage.pageId 
           ? { ...page, sections: updatedSections } 
           : page
       )
@@ -305,63 +335,310 @@ export default function AdminLayoutPage() {
     // Update the pages state
     setPages(prevPages => 
       prevPages.map(page => 
-        page.id === currentPage.id 
+        page.pageId === currentPage.pageId 
           ? { ...page, sections: updatedSections } 
           : page
       )
     );
   };
 
-  const handleSaveSection = (sectionData: any) => {
+  const handleSaveSection = async (sectionData: any) => {
     const currentPage = getCurrentPage();
-    if (!currentPage) return;
+    if (!currentPage) {
+      console.error("No page selected");
+      alert("Error: No page selected");
+      return;
+    }
     
-    let updatedSections = [...currentPage.sections];
+    let uploadedImageUrl = sectionData.imageUrl || '';
+    let uploadedVideoUrl = sectionData.videoUrl || '';
+    let uploadedThumbnailUrl = sectionData.thumbnailUrl || '';
+
+    // Handle Image Upload with progress tracking
+    if (selectedImageFile) {
+      setIsImageUploading(true);
+      setImageUploadProgress(0);
+      
+      const imageFormData = new FormData();
+      imageFormData.append('file', selectedImageFile);
+      imageFormData.append('type', 'image');
+      
+      try {
+        console.log('Uploading image file:', selectedImageFile.name, 'Size:', (selectedImageFile.size / (1024 * 1024)).toFixed(2), 'MB', 'Type:', selectedImageFile.type);
+        
+        // Use relative URL instead of absolute
+        const uploadUrl = '/api/admin/upload';
+        console.log('Using upload URL:', uploadUrl);
+        
+        // Use fetch API which is simpler but doesn't track progress
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          body: imageFormData,
+          headers: {
+            'Authorization': `Bearer ${getAdminToken()}`
+          }
+        });
+        
+        console.log('Upload response status:', response.status);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          console.error('Upload error response:', errorData || response.statusText);
+          throw new Error(
+            errorData?.error || `HTTP error ${response.status}: ${response.statusText}`
+          );
+        }
+        
+        const result = await response.json();
+        console.log('Upload result:', result);
+        
+        if (result.success && result.url) {
+          uploadedImageUrl = result.url;
+        } else {
+          throw new Error(result.error || 'Unknown upload error');
+        }
+        
+        // Reset progress after successful upload
+        setIsImageUploading(false);
+        setImageUploadProgress(100);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert(`Image upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setIsImageUploading(false);
+        return;
+      }
+    }
+
+    // Handle Video Upload with progress tracking
+    if (selectedVideoFile) {
+      setIsVideoUploading(true);
+      setVideoUploadProgress(0);
+      
+      const videoFormData = new FormData();
+      videoFormData.append('file', selectedVideoFile);
+      videoFormData.append('type', 'video');
+      
+      try {
+        console.log('Uploading video file:', selectedVideoFile.name, 'Size:', (selectedVideoFile.size / (1024 * 1024)).toFixed(2), 'MB', 'Type:', selectedVideoFile.type);
+        
+        // Use relative URL instead of absolute
+        const uploadUrl = '/api/admin/upload';
+        console.log('Using upload URL:', uploadUrl);
+        
+        // Use XMLHttpRequest to track upload progress
+        uploadedVideoUrl = await uploadFileWithProgress(
+          videoFormData, 
+          uploadUrl, 
+          setVideoUploadProgress
+        );
+        
+        // Reset progress after successful upload
+        setIsVideoUploading(false);
+        
+        // Handle thumbnail logic (same as before)
+        if (sectionData.thumbnailUrl && !uploadedThumbnailUrl) {
+          uploadedThumbnailUrl = '';
+        }
+      } catch (error) {
+        console.error('Error uploading video:', error);
+        alert(`Video upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setIsVideoUploading(false);
+        return;
+      }
+    }
+
+    let updatedSections: SectionItem[];
+    const commonContent = {
+      title: sectionData.title,
+      subtitle: sectionData.subtitle,
+      description: sectionData.description,
+      buttonText: sectionData.buttonText,
+      buttonLink: sectionData.buttonLink,
+    };
     
     if (editingSection) {
-      // Update existing section
-      updatedSections = updatedSections.map(section => 
+      updatedSections = currentPage.sections.map(section =>
         section.id === editingSection.id
-          ? { ...section, ...sectionData }
+          ? {
+              ...section,
+              type: sectionType,
+              content: {
+                ...section.content,
+                ...commonContent,
+                ...(sectionType === 'product' && { productIds: sectionData.productIds }),
+                ...((sectionType === 'image' || sectionType === 'banner') && { 
+                  imageUrl: uploadedImageUrl || (section.content.imageUrl || '') 
+                }),
+                ...(sectionType === 'video' && { 
+                  videoUrl: uploadedVideoUrl || (section.content.videoUrl || ''), 
+                  thumbnailUrl: uploadedThumbnailUrl || (section.content.thumbnailUrl || '') 
+                }),
+                ...(sectionType === 'text' && { body: sectionData.body }),
+              }
+            }
           : section
       );
     } else {
-      // Add new section
       const newSection: SectionItem = {
-        id: `section-${Date.now()}`, // Generate a unique ID
+        id: `section-${Date.now()}`,
         type: sectionType,
-        content: sectionData,
-        position: updatedSections.length // Place at the end
+        content: {
+          ...commonContent,
+          ...(sectionType === 'product' && { productIds: sectionData.productIds || [] }),
+          ...((sectionType === 'image' || sectionType === 'banner') && { imageUrl: uploadedImageUrl }),
+          ...(sectionType === 'video' && { 
+            videoUrl: uploadedVideoUrl, 
+            thumbnailUrl: uploadedThumbnailUrl
+          }),
+          ...(sectionType === 'text' && { body: sectionData.body || '' }),
+        },
+        position: currentPage.sections.length
       };
-      
-      updatedSections.push(newSection);
+      updatedSections = [...currentPage.sections, newSection];
     }
-    
-    // Update the pages state
+
     setPages(prevPages => 
       prevPages.map(page => 
-        page.id === currentPage.id 
+        page.pageId === selectedPageId
           ? { ...page, sections: updatedSections } 
           : page
       )
     );
     
-    // Close the modal
     setShowSectionModal(false);
     setEditingSection(null);
+    setSelectedImageFile(null);
+    setSelectedVideoFile(null);
   };
 
   const handleSaveLayout = async () => {
     try {
-      // In a real application, you would send the layout data to an API endpoint
+      // Save layout data to the database through API
       console.log('Saving layout data:', pages);
       
-      // Mock successful save
-      alert('Layout saved successfully!');
+      const selectedPage = getCurrentPage();
+      if (!selectedPage) {
+        alert('No page selected to save');
+        return;
+      }
+      
+      setLoading(true);
+      
+      const response = await fetch('/api/admin/layout/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAdminToken()}`
+        },
+        body: JSON.stringify({
+          pageId: selectedPage.pageId,
+          pageName: selectedPage.pageName,
+          pagePath: selectedPage.pagePath,
+          sections: selectedPage.sections
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `Failed to save layout: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('Layout saved successfully:', result);
+      
+      alert('Layout saved successfully! Changes will be visible on the website.');
+      setLoading(false);
     } catch (error) {
       console.error('Error saving layout:', error);
-      alert('Failed to save layout. Please try again.');
+      alert(`Failed to save layout: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setLoading(false);
     }
+  };
+
+  // Helper function to upload file with progress tracking
+  const uploadFileWithProgress = (formData: FormData, url: string, setProgress: (progress: number) => void): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      // Debug the request before sending
+      console.log('XHR setup for URL:', url);
+      console.log('FormData contents:', 
+        [...formData.entries()].map(([key, value]) => {
+          if (value instanceof File) {
+            return `${key}: File(${value.name}, ${value.type}, ${(value.size / 1024).toFixed(2)}KB)`;
+          }
+          return `${key}: ${value}`;
+        })
+      );
+      
+      // Setup progress event
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          setProgress(percentComplete);
+          console.log(`Upload progress: ${percentComplete}%`);
+        }
+      });
+      
+      // Setup load event
+      xhr.addEventListener('load', () => {
+        console.log('XHR load event fired, status:', xhr.status);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            console.log('XHR successful response:', response);
+            if (response.success) {
+              resolve(response.url);
+            } else {
+              console.error('Server returned error:', response.error || 'Unknown error');
+              reject(new Error(response.error || 'Upload failed'));
+            }
+          } catch (error) {
+            console.error('Failed to parse server response:', xhr.responseText);
+            reject(new Error('Invalid response from server'));
+          }
+        } else {
+          try {
+            // Try to parse error from response
+            const errorData = JSON.parse(xhr.responseText);
+            console.error(`HTTP error ${xhr.status}: ${errorData.error || xhr.statusText}`);
+            reject(new Error(errorData.error || `HTTP error ${xhr.status}: ${xhr.statusText}`));
+          } catch (e) {
+            // If we can't parse JSON, use the status text
+            console.error(`HTTP error ${xhr.status}: ${xhr.statusText}, Response:`, xhr.responseText);
+            reject(new Error(`HTTP error ${xhr.status}: ${xhr.statusText}`));
+          }
+        }
+      });
+      
+      // Setup error event
+      xhr.addEventListener('error', () => {
+        console.error('Network error during upload');
+        reject(new Error('Network error occurred'));
+      });
+      
+      // Setup timeout event
+      xhr.addEventListener('timeout', () => {
+        console.error('Upload request timed out');
+        reject(new Error('Request timeout'));
+      });
+      
+      // Get the file type from formData
+      const fileType = formData.get('type') as string;
+      const isVideo = fileType === 'video';
+      
+      // Open and send the request - try with a more specific API path
+      console.log('Opening XHR connection to:', url);
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization', `Bearer ${getAdminToken()}`);
+      
+      // Set longer timeout for videos (5 minutes) vs images (2 minutes)
+      xhr.timeout = isVideo ? 300000 : 120000; // 5 minutes for videos, 2 minutes for images
+      
+      // Send the request
+      console.log('Sending XHR request with FormData');
+      xhr.send(formData);
+    });
   };
 
   if (authLoading || loading) {
@@ -388,17 +665,17 @@ export default function AdminLayoutPage() {
           >
             <FiEye className="mr-2" />
             {previewMode ? 'Exit Preview' : 'Preview'}
-            </button>
-            <button
-              onClick={handleSaveLayout}
+          </button>
+          <button
+            onClick={handleSaveLayout}
             className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700"
-            >
+          >
             <FiSave className="mr-2" />
             Save Layout
-            </button>
-          </div>
+          </button>
         </div>
-        
+      </div>
+      
       <div className="grid grid-cols-4 gap-6">
         {/* Page Selector Sidebar */}
         <div className="col-span-1 bg-white rounded-lg shadow p-4">
@@ -406,69 +683,69 @@ export default function AdminLayoutPage() {
             <FiLayout className="mr-2" /> Page Templates
           </h2>
           <div className="space-y-2">
-                {availablePages.map(page => (
-                  <button
-                    key={page.id}
-                    onClick={() => handlePageSelect(page.id)}
+            {availablePages.map(page => (
+              <button
+                key={page.pageId}
+                onClick={() => handlePageSelect(page.pageId)}
                 className={`w-full text-left px-3 py-2 rounded-md ${
-                      selectedPageId === page.id
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                    : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    {page.name}
-                  </button>
-                ))}
-            </div>
+                  selectedPageId === page.pageId
+                    ? 'bg-blue-50 text-blue-700 font-medium'
+                  : 'hover:bg-gray-100'
+                }`}
+              >
+                {page.pageName}
+              </button>
+            ))}
           </div>
-          
+        </div>
+        
         {/* Layout Editor */}
         <div className="col-span-3 bg-white rounded-lg shadow">
           {!currentPage ? (
             <div className="p-6 text-center text-gray-500">
               Select a page to edit its layout
-                  </div>
+            </div>
           ) : previewMode ? (
-                    // Preview Mode
+            // Preview Mode
             <div className="p-6">
               <div className="mb-4 text-sm text-gray-500">
-                Preview of {currentPage.name} ({currentPage.path})
+                Preview of {currentPage.pageName} ({currentPage.pagePath})
               </div>
               <div className="border border-gray-200 rounded-lg p-4 min-h-[500px] bg-gray-50">
                 {currentPage.sections.map((section, index) => (
                   <div key={section.id} className="mb-8 border-b pb-6">
-                            {section.type === 'banner' && (
-                              <div className="relative">
-                                <img 
-                                  src={section.content.imageUrl} 
-                                  alt={section.content.title} 
+                    {section.type === 'banner' && (
+                      <div className="relative">
+                        <img 
+                          src={section.content.imageUrl} 
+                          alt={section.content.title} 
                           className="w-full h-64 object-cover rounded-lg"
                         />
                         <div className="absolute inset-0 flex flex-col justify-center items-center text-white bg-black bg-opacity-40 rounded-lg">
                           <h2 className="text-3xl font-bold mb-2">{section.content.title}</h2>
                           <p className="text-xl">{section.content.subtitle}</p>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {section.type === 'product' && (
-                              <div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {section.type === 'product' && (
+                      <div>
                         <h3 className="text-xl font-semibold mb-4">{section.content.title}</h3>
                         <div className="grid grid-cols-4 gap-4">
-                                  {availableProducts.slice(0, 4).map(product => (
+                          {availableProducts.slice(0, 4).map(product => (
                             <div key={product._id} className="border rounded-lg p-3">
-                                      <img 
+                              <img 
                                 src={product.images[0]?.url}
-                                        alt={product.name}
+                                alt={product.name}
                                 className="w-full h-32 object-contain mb-2"
                               />
                               <h4 className="font-medium">{product.name}</h4>
                               <p className="text-blue-600">₹{product.price.toFixed(2)}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
                     {section.type === 'text' && (
                       <div className="prose max-w-none">
@@ -476,34 +753,52 @@ export default function AdminLayoutPage() {
                         <p>{section.content.body}</p>
                       </div>
                     )}
-                            
-                            {section.type === 'video' && (
-                              <div>
+                    
+                    {section.type === 'video' && (
+                      <div>
                         <h3 className="text-xl font-semibold mb-4">{section.content.title}</h3>
                         <div className="relative pt-[56.25%] bg-black rounded-lg overflow-hidden">
-                                  <img
-                                    src={section.content.thumbnailUrl}
-                                    alt="Video thumbnail"
-                            className="absolute inset-0 w-full h-full object-cover"
-                                  />
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-16 h-16 bg-white bg-opacity-75 rounded-full flex items-center justify-center">
-                              <div className="w-0 h-0 border-t-8 border-b-8 border-l-12 border-transparent border-l-blue-600 ml-1"></div>
-                                    </div>
-                                  </div>
+                          {section.content.videoUrl ? (
+                            <video
+                              src={section.content.videoUrl}
+                              autoPlay
+                              loop
+                              muted={false}
+                              playsInline
+                              controls={false}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onContextMenu={(e) => e.preventDefault()}
+                              style={{ pointerEvents: 'none' }}
+                            >
+                              Your browser does not support the video tag.
+                            </video>
+                          ) : (
+                            <>
+                              <img
+                                src={section.content.thumbnailUrl}
+                                alt="Video thumbnail"
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-16 h-16 bg-white bg-opacity-75 rounded-full flex items-center justify-center">
+                                  <div className="w-0 h-0 border-t-8 border-b-8 border-l-12 border-transparent border-l-blue-600 ml-1"></div>
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        ))}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    // Edit Mode
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            // Edit Mode
             <div className="p-6">
               <div className="mb-6 flex justify-between items-center">
                 <h2 className="text-lg font-semibold">
-                  Editing: {currentPage.name} ({currentPage.path})
+                  Editing: {currentPage.pageName} ({currentPage.pagePath})
                 </h2>
                 <button
                   onClick={addNewSection}
@@ -513,7 +808,7 @@ export default function AdminLayoutPage() {
                 </button>
               </div>
               
-                      {currentPage.sections.length === 0 ? (
+              {currentPage.sections.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg">
                   <p className="text-gray-500 mb-4">This page has no sections yet</p>
                   <button
@@ -541,37 +836,37 @@ export default function AdminLayoutPage() {
                         </div>
                         <div className="flex space-x-2">
                           {index > 0 && (
-                                    <button 
-                                      onClick={() => moveSectionUp(index)} 
+                            <button 
+                              onClick={() => moveSectionUp(index)} 
                               className="p-1 text-gray-500 hover:text-blue-600"
                               title="Move up"
-                                    >
-                                      ↑
-                                    </button>
+                            >
+                              ↑
+                            </button>
                           )}
                           {index < currentPage.sections.length - 1 && (
-                                    <button 
-                                      onClick={() => moveSectionDown(index)} 
+                            <button 
+                              onClick={() => moveSectionDown(index)} 
                               className="p-1 text-gray-500 hover:text-blue-600"
                               title="Move down"
-                                    >
-                                      ↓
-                                    </button>
+                            >
+                              ↓
+                            </button>
                           )}
-                                    <button 
-                                      onClick={() => editSection(section)}
+                          <button 
+                            onClick={() => editSection(section)}
                             className="p-1 text-gray-500 hover:text-blue-600"
                             title="Edit section"
-                                    >
+                          >
                             <FiEdit size={16} />
-                                    </button>
-                                    <button 
-                                      onClick={() => removeSection(section.id)}
+                          </button>
+                          <button 
+                            onClick={() => removeSection(section.id)}
                             className="p-1 text-gray-500 hover:text-red-600"
                             title="Remove section"
-                                    >
+                          >
                             <FiX size={16} />
-                                    </button>
+                          </button>
                         </div>
                       </div>
                       
@@ -583,15 +878,15 @@ export default function AdminLayoutPage() {
                                 src={section.content.imageUrl}
                                 alt=""
                                 className="w-full h-full object-cover"
-                            />
-                          </div>
+                              />
+                            </div>
                             <div className="flex-1 min-w-0">
                               <p className="truncate font-medium">{section.content.title}</p>
                               <p className="truncate text-gray-500 text-xs">{section.content.subtitle}</p>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      
+                        )}
+                        
                         {section.type === 'product' && (
                           <div>
                             <p className="font-medium">{section.content.title}</p>
@@ -619,108 +914,533 @@ export default function AdminLayoutPage() {
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="w-6 h-6 bg-white bg-opacity-75 rounded-full flex items-center justify-center">
                                   <div className="w-0 h-0 border-t-3 border-b-3 border-l-4 border-transparent border-l-blue-600 ml-0.5"></div>
-                          </div>
-                        </div>
-                          </div>
-                          <div>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
                               <p className="truncate font-medium">{section.content.title}</p>
                               <p className="truncate text-gray-500 text-xs">Video content</p>
                             </div>
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
                   ))}
                 </div>
               )}
             </div>
           )}
-                </div>
-              </div>
+        </div>
+      </div>
 
       {/* Section Edit Modal */}
       {showSectionModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="fixed inset-0 bg-black opacity-50"></div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b p-4">
+              <h3 className="text-lg font-medium">
+                {editingSection ? 'Edit Section' : 'Add New Section'}
+              </h3>
+              <button 
+                onClick={() => setShowSectionModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
             
-            <div className="relative bg-white rounded-lg max-w-3xl w-full p-6 shadow-xl">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold">
-                  {editingSection ? 'Edit Section' : 'Add New Section'}
-                </h3>
-                <button
-                  onClick={() => setShowSectionModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
+            <form 
+              className="p-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formElement = e.currentTarget;
+                const formData = new FormData(formElement);
+                const sectionData: any = {};
+                
+                // Convert FormData to object
+                formData.forEach((value, key) => {
+                  if (key === 'productIds') {
+                    // Handle multiple select for products
+                    const select = formElement.querySelector('select[name="productIds"]') as HTMLSelectElement;
+                    const selectedOptions = Array.from(select.selectedOptions).map(option => option.value);
+                    sectionData[key] = selectedOptions;
+                  } else {
+                    sectionData[key] = value;
+                  }
+                });
+                
+                handleSaveSection(sectionData);
+              }}
+            >
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Section Type</label>
+                <select
+                  value={sectionType}
+                  onChange={(e) => setSectionType(e.target.value as SectionItem['type'])}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  disabled={!!editingSection}
                 >
-                  <FiX size={20} />
-                </button>
+                  <option value="product">Product Collection</option>
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                  <option value="text">Text</option>
+                  <option value="banner">Banner</option>
+                  <option value="gallery">Media Gallery</option>
+                </select>
               </div>
               
-              {!editingSection && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Section Type
-                  </label>
-                  <div className="grid grid-cols-4 gap-3">
-                    {['banner', 'product', 'text', 'video'].map(type => (
-                      <button
-                        key={type}
-                        onClick={() => setSectionType(type as SectionItem['type'])}
-                        className={`p-3 border rounded-lg text-center ${
-                          sectionType === type
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        {type === 'banner' && <FiImage className="mx-auto mb-2" size={24} />}
-                        {type === 'product' && <FiPackage className="mx-auto mb-2" size={24} />}
-                        {type === 'text' && <FiEdit className="mx-auto mb-2" size={24} />}
-                        {type === 'video' && <FiVideo className="mx-auto mb-2" size={24} />}
-                        <span className="capitalize">{type}</span>
-                      </button>
+              {/* Common Fields */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  name="title"
+                  defaultValue={editingSection?.content.title || ''}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  placeholder="Section title"
+                />
+              </div>
+              
+              {(sectionType !== 'text') && (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subtitle (Optional)</label>
+                    <input
+                      type="text"
+                      name="subtitle"
+                      defaultValue={editingSection?.content.subtitle || ''}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      placeholder="Section subtitle"
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                    <textarea
+                      name="description"
+                      defaultValue={editingSection?.content.description || ''}
+                      rows={2}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      placeholder="Short description"
+                    ></textarea>
+                  </div>
+                  
+                  <div className="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Button Text (Optional)</label>
+                      <input
+                        type="text"
+                        name="buttonText"
+                        defaultValue={editingSection?.content.buttonText || ''}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        placeholder="e.g., Shop Now"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Button Link (Optional)</label>
+                      <input
+                        type="text"
+                        name="buttonLink"
+                        defaultValue={editingSection?.content.buttonLink || ''}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        placeholder="e.g., /collection"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Product Section */}
+              {sectionType === 'product' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Products</label>
+                  <select
+                    name="productIds"
+                    multiple
+                    className="w-full p-2 border border-gray-300 rounded-md h-40"
+                    defaultValue={editingSection?.type === 'product' ? editingSection?.content.productIds : []}
+                  >
+                    {availableProducts.map(product => (
+                      <option key={product._id} value={product._id}>
+                        {product.name} - ₹{product.price.toLocaleString()}
+                      </option>
                     ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple products</p>
+                </div>
+              )}
+              
+              {/* Image or Banner Section */}
+              {(sectionType === 'image' || sectionType === 'banner') && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {sectionType === 'banner' ? 'Background Image URL' : 'Image URL'}
+                  </label>
+                  <input
+                    type="text"
+                    name="imageUrl"
+                    defaultValue={editingSection?.content.imageUrl || ''}
+                    className="w-full p-2 border border-gray-300 rounded-md mb-2"
+                    placeholder="Enter image URL or upload new"
+                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Or Upload New Image</label>
+                  <input
+                    type="file"
+                    name="imageFile"
+                    accept="image/*"
+                    onChange={(e) => setSelectedImageFile(e.target.files ? e.target.files[0] : null)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    disabled={isImageUploading}
+                  />
+                  {selectedImageFile && <p className="text-xs text-gray-500 mt-1">Selected: {selectedImageFile.name}</p>}
+                  {editingSection?.content.imageUrl && !selectedImageFile && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500">Current image:</p>
+                      <img src={editingSection.content.imageUrl} alt="Current" className="max-h-20 border rounded"/>
+                    </div>
+                  )}
+                  
+                  {/* Image upload progress bar */}
+                  {isImageUploading && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Uploading: {imageUploadProgress}%</p>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-blue-600 h-2.5 rounded-full" 
+                          style={{ width: `${imageUploadProgress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Video Section */}
+              {sectionType === 'video' && (
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Video URL</label>
+                    <input
+                      type="text"
+                      name="videoUrl"
+                      defaultValue={editingSection?.content.videoUrl || ''}
+                      className="w-full p-2 border border-gray-300 rounded-md mb-2"
+                      placeholder="Enter video URL (e.g., YouTube, Vimeo) or upload new"
+                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Or Upload New Video</label>
+                    <input
+                      type="file"
+                      name="videoFile"
+                      accept="video/*"
+                      onChange={(e) => setSelectedVideoFile(e.target.files ? e.target.files[0] : null)}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      disabled={isVideoUploading}
+                    />
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-xs text-blue-700">
+                        <strong>Note:</strong> Videos will automatically play in a loop without controls or sound options.
+                        Make sure your video is appropriately sized and optimized.
+                      </p>
+                    </div>
+                    {selectedVideoFile && <p className="text-xs text-gray-500 mt-1">Selected: {selectedVideoFile.name}</p>}
+                    {editingSection?.type === 'video' && editingSection?.content.videoUrl && !selectedVideoFile && (
+                      <p className="text-xs text-gray-500 mt-1">Current video: {editingSection.content.videoUrl}</p>
+                    )}
+                    
+                    {/* Video upload progress bar */}
+                    {isVideoUploading && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500 mb-1">Uploading: {videoUploadProgress}%</p>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="bg-blue-600 h-2.5 rounded-full" 
+                            style={{ width: `${videoUploadProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Video Thumbnail URL (Optional)</label>
+                    <input
+                      type="text"
+                      name="thumbnailUrl"
+                      defaultValue={editingSection?.type === 'video' ? editingSection?.content.thumbnailUrl : ''}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      placeholder="URL for video thumbnail (if not uploading video)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">If uploading a video, a thumbnail might be auto-generated or you can upload one with the video.</p>
+                  </div>
+                </>
+              )}
+              
+              {/* Text Section */}
+              {sectionType === 'text' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Body Content</label>
+                  <textarea
+                    name="body"
+                    defaultValue={editingSection?.type === 'text' ? editingSection?.content.body : ''}
+                    rows={5}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    placeholder="Enter text content here..."
+                  ></textarea>
+                </div>
+              )}
+              
+              {/* Media Gallery Section */}
+              {sectionType === 'gallery' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Media Gallery</label>
+                  
+                  {/* Display existing media items */}
+                  {editingSection?.content?.mediaItems && editingSection.content.mediaItems.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      {editingSection.content.mediaItems.map((item: any, index: number) => (
+                        <div key={index} className="border rounded-md p-2">
+                          <div className="relative w-full h-32 bg-gray-100 mb-2 rounded overflow-hidden">
+                            {item.type === 'image' ? (
+                              <img src={item.url} alt={`Gallery item ${index + 1}`} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-3xl text-gray-400">▶</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-500 truncate">{item.type}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete this ${item.type}?`)) {
+                                  const updatedMediaItems = [...editingSection.content.mediaItems];
+                                  updatedMediaItems.splice(index, 1);
+                                  const updatedContent = {...editingSection.content, mediaItems: updatedMediaItems};
+                                  setEditingSection({...editingSection, content: updatedContent});
+                                }
+                              }}
+                              className="px-2 py-1 bg-red-50 text-red-600 text-xs rounded border border-red-200 hover:bg-red-100"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 mb-3">No media items added yet.</p>
+                  )}
+                  
+                  <div className="border rounded-md p-3 bg-gray-50">
+                    <h4 className="text-sm font-medium mb-2">Add New Media Item</h4>
+                    
+                    <div className="mb-2">
+                      <label className="block text-xs text-gray-600 mb-1">Media Type</label>
+                      <select 
+                        name="newMediaType" 
+                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                      >
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                      </select>
+                    </div>
+                    
+                    <div className="mb-2">
+                      <label className="block text-xs text-gray-600 mb-1">Upload File</label>
+                      <input
+                        type="file"
+                        name="newMediaFile"
+                        accept="image/*,video/*"
+                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        const form = e.currentTarget.closest('form');
+                        if (!form) return;
+                        
+                        const mediaTypeSelect = form.querySelector('select[name="newMediaType"]') as HTMLSelectElement;
+                        const mediaFileInput = form.querySelector('input[name="newMediaFile"]') as HTMLInputElement;
+                        
+                        if (!mediaTypeSelect || !mediaFileInput || !mediaFileInput.files?.[0]) {
+                          alert('Please select a file to upload');
+                          return;
+                        }
+                        
+                        const mediaType = mediaTypeSelect.value as 'image' | 'video';
+                        const file = mediaFileInput.files[0];
+                        
+                        // Set uploading state based on media type
+                        if (mediaType === 'image') {
+                          setIsImageUploading(true);
+                          setImageUploadProgress(0);
+                        } else {
+                          setIsVideoUploading(true);
+                          setVideoUploadProgress(0);
+                        }
+                        
+                        try {
+                          // Create form data for upload
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          formData.append('type', mediaType);
+                          
+                          // Upload the file
+                          const uploadUrl = '/api/admin/upload';
+                          console.log(`Uploading ${mediaType} for gallery:`, file.name);
+                          
+                          const response = await fetch(uploadUrl, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                              'Authorization': `Bearer ${getAdminToken()}`
+                            }
+                          });
+                          
+                          if (!response.ok) {
+                            const errorData = await response.json().catch(() => null);
+                            throw new Error(errorData?.error || `Upload failed: ${response.status} ${response.statusText}`);
+                          }
+                          
+                          const result = await response.json();
+                          
+                          if (!result.success || !result.url) {
+                            throw new Error(result.error || 'Upload failed - no URL returned');
+                          }
+                          
+                          // Add the new media item to the section
+                          const newMediaItem = {
+                            type: mediaType,
+                            url: result.url,
+                            title: file.name
+                          };
+                          
+                          // Update the editing section with the new media item
+                          const currentMediaItems = editingSection?.content?.mediaItems || [];
+                          const updatedContent = {
+                            ...editingSection?.content,
+                            mediaItems: [...currentMediaItems, newMediaItem]
+                          };
+                          
+                          setEditingSection({
+                            ...editingSection!,
+                            content: updatedContent
+                          });
+                          
+                          // Reset form and state
+                          mediaFileInput.value = '';
+                          setIsImageUploading(false);
+                          setIsVideoUploading(false);
+                          setImageUploadProgress(0);
+                          setVideoUploadProgress(0);
+                          
+                          alert(`${mediaType} added to gallery successfully!`);
+                        } catch (error) {
+                          console.error(`Error uploading ${mediaType} for gallery:`, error);
+                          alert(`Failed to upload ${mediaType}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                          setIsImageUploading(false);
+                          setIsVideoUploading(false);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                      disabled={isImageUploading || isVideoUploading}
+                    >
+                      {isImageUploading || isVideoUploading ? (
+                        <span>Uploading... {isImageUploading ? imageUploadProgress : videoUploadProgress}%</span>
+                      ) : (
+                        <span>Add to Gallery</span>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}
               
-              {/* Section form based on type */}
-              <div className="space-y-4">
-                <p className="text-gray-500 text-sm italic">
-                  This is a demo interface. In a real implementation, you would see form fields specific to the section type.
-                </p>
-                
-                <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                      // For demo purposes, we'll just create a simple content object
-                      const demoContent = {
-                        title: 'Demo Section Title',
-                        ...(sectionType === 'banner' && {
-                          subtitle: 'Demo subtitle text',
-                          imageUrl: 'https://placehold.co/1200x600/272420/FFFFFF?text=Demo+Banner'
-                        }),
-                        ...(sectionType === 'product' && {
-                          productIds: availableProducts.slice(0, 4).map(p => p._id)
-                        }),
-                        ...(sectionType === 'text' && {
-                          body: 'This is a sample text section content. In a real implementation, this would be editable.'
-                        }),
-                        ...(sectionType === 'video' && {
-                          videoUrl: 'https://www.example.com/demo-video.mp4',
-                          thumbnailUrl: 'https://placehold.co/800x450/272420/FFFFFF?text=Demo+Video'
-                        })
-                      };
-                      
-                      handleSaveSection(demoContent);
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    Save Section
-                </button>
+              {/* Image or Banner Section */}
+              {(sectionType === 'image' || sectionType === 'banner') && (
+                <div className="mb-4">
+                  {editingSection?.content?.imageUrl && (
+                    <div className="mb-3 p-3 border rounded-md">
+                      <p className="text-sm font-medium mb-2">Current Image</p>
+                      <div className="flex items-center">
+                        <img 
+                          src={editingSection.content.imageUrl} 
+                          alt="Current image" 
+                          className="w-20 h-20 object-cover rounded-md mr-3"
+                        />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500 truncate">{editingSection.content.imageUrl}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this image?')) {
+                                // Create a copy of the editing section with the image removed
+                                const updatedContent = {...editingSection.content, imageUrl: ''};
+                                setEditingSection({...editingSection, content: updatedContent});
+                              }
+                            }}
+                            className="mt-2 px-2 py-1 bg-red-50 text-red-600 text-xs rounded border border-red-200 hover:bg-red-100"
+                          >
+                            Delete Image
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {/* Video Section */}
+              {sectionType === 'video' && (
+                <div className="mb-4">
+                  {editingSection?.content?.videoUrl && (
+                    <div className="mb-3 p-3 border rounded-md">
+                      <p className="text-sm font-medium mb-2">Current Video</p>
+                      <div className="flex items-center">
+                        <div className="w-20 h-20 bg-gray-100 flex items-center justify-center rounded-md mr-3">
+                          <span className="text-3xl text-gray-400">▶</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500 truncate">{editingSection.content.videoUrl}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this video?')) {
+                                // Create a copy of the editing section with the video removed
+                                const updatedContent = {...editingSection.content, videoUrl: '', thumbnailUrl: ''};
+                                setEditingSection({...editingSection, content: updatedContent});
+                              }
+                            }}
+                            className="mt-2 px-2 py-1 bg-red-50 text-red-600 text-xs rounded border border-red-200 hover:bg-red-100"
+                          >
+                            Delete Video
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowSectionModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700"
+                  disabled={isImageUploading || isVideoUploading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={isImageUploading || isVideoUploading}
+                >
+                  {isImageUploading || isVideoUploading ? 'Uploading...' : 'Save Changes'}
+                </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
